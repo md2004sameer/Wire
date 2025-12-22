@@ -1,110 +1,284 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Room Chat</title>
+  <title>Wire · Room</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
+      margin: 0;
       background:#020617;
       color:white;
-      font-family:sans-serif;
-      padding:20px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      display:flex;
+      flex-direction:column;
+      height:100vh;
     }
+
+    /* Header */
+    header {
+      padding:15px 20px;
+      background:#020617;
+      border-bottom:1px solid #334155;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+
+    header h2 {
+      margin:0;
+      font-size:18px;
+      font-weight:600;
+    }
+
+    #status {
+      font-size:12px;
+      color:#94a3b8;
+    }
+
+    /* Messages */
     #messages {
-      height:300px;
-      border:1px solid #334155;
-      padding:10px;
-      overflow:auto;
-      margin-bottom:10px;
+      flex:1;
+      padding:15px;
+      overflow-y:auto;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      background:linear-gradient(#020617, #020617);
     }
-    input { width:75%; padding:10px }
-    button { padding:10px }
-    .system { color:#94a3b8 }
-    .me { color:#38bdf8 }
-    .other { color:#22c55e }
+
+    .row {
+      display:flex;
+      gap:10px;
+      max-width:85%;
+    }
+
+    .row.me {
+      align-self:flex-end;
+      justify-content:flex-end;
+    }
+
+    .row.other {
+      align-self:flex-start;
+    }
+
+    .avatar {
+      width:38px;
+      height:38px;
+      border-radius:50%;
+      background:#334155;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:600;
+      font-size:14px;
+      flex-shrink:0;
+    }
+
+    .bubble {
+      padding:10px 14px;
+      border-radius:12px;
+      line-height:1.4;
+      word-break:break-word;
+    }
+
+    .bubble.me {
+      background:#2563eb;
+      border-bottom-right-radius:4px;
+    }
+
+    .bubble.other {
+      background:#1e293b;
+      border-bottom-left-radius:4px;
+    }
+
+    .username {
+      font-size:12px;
+      opacity:0.7;
+      margin-bottom:4px;
+    }
+
+    .system {
+      align-self:center;
+      font-size:12px;
+      color:#94a3b8;
+      background:#020617;
+      padding:6px 12px;
+      border-radius:999px;
+      border:1px solid #334155;
+    }
+
+    /* Input */
+    footer {
+      display:flex;
+      gap:10px;
+      padding:12px;
+      border-top:1px solid #334155;
+      background:#020617;
+    }
+
+    footer input {
+      flex:1;
+      padding:12px;
+      border-radius:999px;
+      border:none;
+      outline:none;
+      background:#020617;
+      color:white;
+      border:1px solid #334155;
+    }
+
+    footer button {
+      padding:12px 18px;
+      border-radius:999px;
+      border:none;
+      cursor:pointer;
+      background:#2563eb;
+      color:white;
+      font-weight:600;
+    }
+
+    footer button:disabled {
+      background:#334155;
+      cursor:not-allowed;
+    }
   </style>
 </head>
 <body>
 
-<h2 id="title"></h2>
+<header>
+  <h2 id="title"></h2>
+  <div id="status">Connecting...</div>
+</header>
 
 <div id="messages"></div>
 
-<input id="msg" placeholder="Type message..." />
-<button onclick="sendMessage()">Send</button>
-
-<div id="status">Connecting...</div>
+<footer>
+  <input id="msg" placeholder="Type a message…" autocomplete="off" />
+  <button id="sendBtn" onclick="sendMessage()" disabled>Send</button>
+</footer>
 
 <script>
 const params = new URLSearchParams(window.location.search);
 const roomId = params.get("room");
+const username = params.get("username");
 
-if (!roomId) {
-  alert("Room ID missing");
+if (!roomId || !username) {
+  alert("Room or username missing");
   window.location.href = "/";
 }
 
-document.getElementById("title").innerText = "Room: " + roomId;
+document.getElementById("title").innerText = `Room ${roomId}`;
 
-let socket = null;
-let reconnecting = false;
+const messagesEl = document.getElementById("messages");
+const inputEl = document.getElementById("msg");
+const sendBtn = document.getElementById("sendBtn");
+
+let socket;
+
+inputEl.focus();
+
+inputEl.addEventListener("input", () => {
+  sendBtn.disabled = !inputEl.value.trim();
+});
+
+inputEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendMessage();
+});
 
 function connect() {
-  if (socket && socket.readyState === WebSocket.OPEN) return;
+  socket = new WebSocket(
+    `ws://127.0.0.1:8000/ws/${roomId}?username=${encodeURIComponent(username)}`
+  );
 
-  setStatus("Connecting...");
-  socket = new WebSocket(`ws://127.0.0.1:8000/ws/${roomId}`);
-
-  socket.onopen = () => {
-    reconnecting = false;
-    setStatus("Connected");
-  };
+  socket.onopen = () => setStatus("Connected");
 
   socket.onmessage = (e) => {
     if (e.data.startsWith("__SYSTEM__")) {
-      addMessage(e.data.replace("__SYSTEM__:", ""), "system");
+      addSystem(e.data.replace("__SYSTEM__:", ""));
+      return;
+    }
+
+    const [sender, ...rest] = e.data.split(":");
+    const message = rest.join(":").trim();
+
+    if (sender === username) {
+      addMe(message);
     } else {
-      addMessage(e.data, "other");
+      addOther(sender, message);
     }
   };
 
-  socket.onerror = (e) => {
-    console.log("WebSocket error:", e);
-  };
-
-  socket.onclose = () => {
-    setStatus("Disconnected");
-    if (!reconnecting) {
-      reconnecting = true;
-      setTimeout(connect, 2000);
-    }
-  };
+  socket.onclose = () => setStatus("Disconnected");
 }
 
 function sendMessage() {
-  const input = document.getElementById("msg");
-  const text = input.value.trim();
-  if (!text) return;
-
-  if (!socket || socket.readyState !== WebSocket.OPEN) {
-    alert("Not connected");
-    return;
-  }
+  const text = inputEl.value.trim();
+  if (!text || socket.readyState !== WebSocket.OPEN) return;
 
   socket.send(text);
-  addMessage(text, "me");
-  input.value = "";
+  addMe(text);
+  inputEl.value = "";
+  sendBtn.disabled = true;
 }
 
-function addMessage(text, cls) {
+function addMe(text) {
+  const row = document.createElement("div");
+  row.className = "row me";
+
+  const bubble = document.createElement("div");
+  bubble.className = "bubble me";
+  bubble.innerText = text;
+
+  row.appendChild(bubble);
+  messagesEl.appendChild(row);
+  scrollBottom();
+}
+
+function addOther(sender, text) {
+  const row = document.createElement("div");
+  row.className = "row other";
+
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+  avatar.innerText = sender[0].toUpperCase();
+
+  const bubble = document.createElement("div");
+  bubble.className = "bubble other";
+
+  const name = document.createElement("div");
+  name.className = "username";
+  name.innerText = sender;
+
+  const msg = document.createElement("div");
+  msg.innerText = text;
+
+  bubble.appendChild(name);
+  bubble.appendChild(msg);
+
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+
+  messagesEl.appendChild(row);
+  scrollBottom();
+}
+
+function addSystem(text) {
   const div = document.createElement("div");
-  div.className = cls;
+  div.className = "system";
   div.innerText = text;
-  document.getElementById("messages").appendChild(div);
-  div.scrollIntoView();
+  messagesEl.appendChild(div);
+  scrollBottom();
 }
 
 function setStatus(text) {
   document.getElementById("status").innerText = text;
+}
+
+function scrollBottom() {
+  messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
 connect();
