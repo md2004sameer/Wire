@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Room Chat</title>
+  <style>
+    body {
+      background:#020617;
+      color:white;
+      font-family:sans-serif;
+      padding:20px;
+    }
+    #messages {
+      height:300px;
+      border:1px solid #334155;
+      padding:10px;
+      overflow:auto;
+      margin-bottom:10px;
+    }
+    input { width:75%; padding:10px }
+    button { padding:10px }
+    .system { color:#94a3b8 }
+    .me { color:#38bdf8 }
+    .other { color:#22c55e }
+  </style>
+</head>
+<body>
+
+<h2 id="title"></h2>
+
+<div id="messages"></div>
+
+<input id="msg" placeholder="Type message..." />
+<button onclick="sendMessage()">Send</button>
+
+<div id="status">Connecting...</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const roomId = params.get("room");
+
+if (!roomId) {
+  alert("Room ID missing");
+  window.location.href = "/";
+}
+
+document.getElementById("title").innerText = "Room: " + roomId;
+
+let socket = null;
+let reconnecting = false;
+
+function connect() {
+  if (socket && socket.readyState === WebSocket.OPEN) return;
+
+  setStatus("Connecting...");
+  socket = new WebSocket(`ws://127.0.0.1:8000/ws/${roomId}`);
+
+  socket.onopen = () => {
+    reconnecting = false;
+    setStatus("Connected");
+  };
+
+  socket.onmessage = (e) => {
+    if (e.data.startsWith("__SYSTEM__")) {
+      addMessage(e.data.replace("__SYSTEM__:", ""), "system");
+    } else {
+      addMessage(e.data, "other");
+    }
+  };
+
+  socket.onerror = (e) => {
+    console.log("WebSocket error:", e);
+  };
+
+  socket.onclose = () => {
+    setStatus("Disconnected");
+    if (!reconnecting) {
+      reconnecting = true;
+      setTimeout(connect, 2000);
+    }
+  };
+}
+
+function sendMessage() {
+  const input = document.getElementById("msg");
+  const text = input.value.trim();
+  if (!text) return;
+
+  if (!socket || socket.readyState !== WebSocket.OPEN) {
+    alert("Not connected");
+    return;
+  }
+
+  socket.send(text);
+  addMessage(text, "me");
+  input.value = "";
+}
+
+function addMessage(text, cls) {
+  const div = document.createElement("div");
+  div.className = cls;
+  div.innerText = text;
+  document.getElementById("messages").appendChild(div);
+  div.scrollIntoView();
+}
+
+function setStatus(text) {
+  document.getElementById("status").innerText = text;
+}
+
+connect();
+</script>
+
+</body>
+</html>

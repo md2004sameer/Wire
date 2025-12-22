@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Create or Join Room</title>
+</head>
+<body>
+
+<h2>Create or Join Chat Room</h2>
+
+<button onclick="createRoom()">Create Room</button>
+
+<br><br>
+
+<input id="roomId" placeholder="Enter 6-digit Room ID" />
+<button onclick="joinRoom()">Join Room</button>
+
+<script>
+function createRoom() {
+  fetch("/create-room")
+    .then(res => res.json())
+    .then(data => {
+      window.location.href = `/static/room.html?room=${data.room_id}`;
+    })
+    .catch(err => console.log("Create room error:", err));
+}
+
+function joinRoom() {
+  const roomId = document.getElementById("roomId").value.trim();
+  if (roomId.length !== 6) {
+    alert("Invalid room ID");
+    return;
+  }
+  window.location.href = `/static/room.html?room=${roomId}`;
+}
+</script>
+
+</body>
+</html>
