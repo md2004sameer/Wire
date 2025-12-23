@@ -2,17 +2,11 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from main.security import decode_token
 
-security = HTTPBearer(auto_error=False)
+security = HTTPBearer()  # auto_error=True by default
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
-    if credentials is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-        )
-
     token = credentials.credentials
 
     try:

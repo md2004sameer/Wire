@@ -3,14 +3,31 @@ const limit = 10;
 let loading = false;
 let finished = false;
 
-// -------------------------
-// Load posts
-// -------------------------
+/* =========================
+   Load posts (AUTH REQUIRED)
+   ========================= */
 async function loadPosts() {
   if (loading || finished) return;
   loading = true;
 
-  const res = await fetch(`/posts?skip=${skip}&limit=${limit}`);
+  const token = localStorage.getItem("token");
+  if (!token) {
+    location.href = "/login";
+    return;
+  }
+
+  const res = await fetch(`/posts?skip=${skip}&limit=${limit}`, {
+    headers: {
+      "Authorization": `Bearer ${token}`
+    }
+  });
+
+  if (!res.ok) {
+    console.error("Failed to load posts:", res.status);
+    loading = false;
+    return;
+  }
+
   const data = await res.json();
 
   if (data.length === 0) {
@@ -26,7 +43,7 @@ async function loadPosts() {
     div.className = "post";
     div.innerHTML = `
       <div class="author">${p.author}</div>
-      <div>${p.content}</div>
+      <div class="post-content">${p.content}</div>
     `;
     feed.appendChild(div);
   });
@@ -35,18 +52,17 @@ async function loadPosts() {
   loading = false;
 }
 
-
-// -------------------------
-// Create post (FIXED)
-// -------------------------
+/* =========================
+   Create post
+   ========================= */
 async function createPost() {
   const textarea = document.getElementById("content");
   const content = textarea.value.trim();
+
   if (!content) return;
 
   const token = localStorage.getItem("token");
   if (!token) {
-    alert("Not authenticated");
     location.href = "/login";
     return;
   }
@@ -72,10 +88,9 @@ async function createPost() {
   loadPosts();
 }
 
-
-// -------------------------
-// Infinite scroll
-// -------------------------
+/* =========================
+   Infinite scroll
+   ========================= */
 window.addEventListener("scroll", () => {
   if (
     window.innerHeight + window.scrollY >=
@@ -85,14 +100,14 @@ window.addEventListener("scroll", () => {
   }
 });
 
-
-// -------------------------
-// Logout
-// -------------------------
-function logout() {
-  localStorage.removeItem("token");
-  location.href = "/login";
+/* =========================
+   Navigation
+   ========================= */
+function goToProfile() {
+  location.href = "/profile";
 }
 
-// Initial load
+/* =========================
+   Initial load
+   ========================= */
 loadPosts();

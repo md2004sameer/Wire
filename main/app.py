@@ -9,28 +9,30 @@ from pathlib import Path
 from main.auth import router as auth_router
 from main.feed import router as feed_router
 from main.ws import router as ws_router
+from main.profile import router as profile_router
+from main.database import init_indexes
 
 print("🔥 Wire App Loaded 🔥")
 
 app = FastAPI()
 
-# -------------------------
-# Paths
-# -------------------------
+@app.on_event("startup")
+async def startup():
+    await init_indexes()
+    print("✅ MongoDB indexes ensured")
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = BASE_DIR / "static"
 
-# -------------------------
-# Static Files
-# -------------------------
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-# -------------------------
-# Pages (PUBLIC)
-# -------------------------
 @app.get("/")
 def landing_page():
-    return FileResponse(STATIC_DIR / "index.html")
+    return FileResponse(STATIC_DIR / "landing.html")
+
+@app.get("/profile")
+def profile_page():
+    return FileResponse(STATIC_DIR / "profile.html")
 
 @app.get("/signup")
 def signup_page():
@@ -42,12 +44,9 @@ def login_page():
 
 @app.get("/home")
 def home_page():
-    # Auth enforced via API calls + JS token check
     return FileResponse(STATIC_DIR / "home.html")
 
-# -------------------------
-# Routers (JWT enforced inside APIs)
-# -------------------------
 app.include_router(auth_router)
 app.include_router(feed_router)
 app.include_router(ws_router)
+app.include_router(profile_router)

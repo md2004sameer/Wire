@@ -1,116 +1,190 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>Wire · Home</title>
-
-  <!-- Global theme -->
   <link rel="stylesheet" href="/static/css/theme.css">
-
-  <!-- Home-specific CSS -->
   <style>
-    /* ========== LAYOUT ========== */
+/* ========== LAYOUT ========== */
+body {
+  background:#020617;
+  color:#e5e7eb;
+  font-family: system-ui, sans-serif;
+  margin:0;
+}
+
 .container {
-  max-width: 600px;
-  margin: 0 auto;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  max-width:600px;
+  margin:0 auto;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
 }
 
 /* ========== TOP BAR ========== */
 .topbar {
-  position: sticky;
-  top: 0;
-  background: #020617;
-  border-bottom: 1px solid #1e293b;
-  padding: 12px 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  z-index: 10;
+  position:sticky;
+  top:0;
+  background:#020617;
+  border-bottom:1px solid #1e293b;
+  padding:12px 16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  z-index:10;
 }
 
 .topbar h3 {
-  font-size: 20px;
-  font-weight: 600;
+  margin:0;
+  font-size:20px;
+  font-weight:600;
+}
+
+/* ========== PROFILE AVATAR ========== */
+.profile-avatar {
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  background:#2563eb;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+
+.profile-avatar span {
+  color:white;
+  font-weight:700;
 }
 
 /* ========== COMPOSER ========== */
 .composer {
-  padding: 12px;
-  border-bottom: 1px solid #1e293b;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  padding:12px;
+  border-bottom:1px solid #1e293b;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
 }
 
 .composer textarea {
-  width: 100%;
-  min-height: 80px;
-  resize: none;
-  background: #020617;
-  color: #e5e7eb;
-  border: 1px solid #1e293b;
-  border-radius: 10px;
-  padding: 10px;
-  outline: none;
+  width:100%;
+  min-height:80px;
+  resize:none;
+  background:#020617;
+  color:#e5e7eb;
+  border:1px solid #334155;
+  border-radius:10px;
+  padding:10px;
+  outline:none;
 }
 
 .composer textarea::placeholder {
-  color: #94a3b8;
+  color:#94a3b8;
 }
 
-.post-btn {
-  align-self: flex-end;
+.composer button {
+  align-self:flex-end;
+  padding:8px 16px;
+  background:#2563eb;
+  border:none;
+  border-radius:8px;
+  color:white;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.composer button:hover {
+  background:#1d4ed8;
 }
 
 /* ========== FEED ========== */
 #feed {
-  display: flex;
-  flex-direction: column;
+  display:flex;
+  flex-direction:column;
 }
 
 /* ========== POST ========== */
 .post {
-  padding: 12px;
-  border-bottom: 1px solid #1e293b;
+  padding:12px;
+  border-bottom:1px solid #1e293b;
 }
 
 .author {
-  font-weight: 600;
-  margin-bottom: 6px;
-  color: #f8fafc;
+  font-weight:600;
+  margin-bottom:6px;
+  color:#f8fafc;
 }
 
-.post div:last-child {
-  color: #cbd5f5;
-  line-height: 1.5;
+.post-content {
+  color:#cbd5f5;
+  line-height:1.5;
 }
-  </style>
+</style>
 </head>
+
 <body>
 
 <script>
-  // 🔒 Frontend auth guard
-  const token = localStorage.getItem("token");
-  if (!token) location.href = "/login";
+const token = localStorage.getItem("access_token");
+if (!token) {
+  location.replace("/login");
+}
+
+/* ---------------- LOAD AVATAR (SAFE) ---------------- */
+
+async function loadAvatar() {
+  try {
+    const res = await fetch("/profile/me", {
+      headers: { Authorization: "Bearer " + token }
+    });
+
+    // ❌ REAL logout case
+    if (res.status === 401 || res.status === 403) {
+      localStorage.removeItem("access_token");
+      location.replace("/login");
+      return;
+    }
+
+    // ✅ Profile not created yet — NORMAL
+    if (res.status === 404) {
+      document.getElementById("avatar-letter").innerText = "U";
+      return;
+    }
+
+    if (!res.ok) return;
+
+    const p = await res.json();
+    document.getElementById("avatar-letter").innerText =
+      (p.full_name || "U")[0].toUpperCase();
+
+  } catch {
+    // network errors ignored on home page
+  }
+}
+
+/* ---------------- NAVIGATION ---------------- */
+
+function goToProfile() {
+  location.href = "/profile";
+}
+
+loadAvatar();
 </script>
 
 <div class="container">
 
-  <!-- Top bar -->
   <div class="topbar">
     <h3>Wire</h3>
-    <button onclick="logout()">Logout</button>
+    <div class="profile-avatar" onclick="goToProfile()">
+      <span id="avatar-letter">U</span>
+    </div>
   </div>
 
-  <!-- Composer -->
   <div class="composer">
     <textarea id="content" placeholder="What's happening?"></textarea>
-    <button class="post-btn" onclick="createPost()">Post</button>
+    <button onclick="createPost()">Post</button>
   </div>
 
-  <!-- Feed -->
   <div id="feed"></div>
 
 </div>
