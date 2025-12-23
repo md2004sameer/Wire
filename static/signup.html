@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Signup</title>
+     <link rel="stylesheet" href="/static/css/theme.css">
+</head>
+<body>
+  <h2>Create Account</h2>
+
+  <input id="username" placeholder="Username"><br>
+  <input id="email" placeholder="Email"><br>
+  <input id="password" type="password" placeholder="Password"><br>
+
+  <button onclick="signup()">Signup</button>
+
+  <script>
+  async function signup() {
+    const res = await fetch("/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: username.value,
+        email: email.value,
+        password: password.value
+      })
+    });
+
+    // ❌ Signup failed
+    if (!res.ok) {
+      const err = await res.json();
+      alert(err.detail || "Signup failed");
+      return;
+    }
+
+    // ✅ Signup successful
+    alert("Account created successfully. Please login.");
+    window.location.href = "/login";   // 🔁 REDIRECT
+  }
+</script>
+</body>
+</html>

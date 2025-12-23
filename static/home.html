@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Wire · Home</title>
+
+  <!-- Global theme -->
+  <link rel="stylesheet" href="/static/css/theme.css">
+
+  <!-- Home-specific CSS -->
+  <style>
+    /* ========== LAYOUT ========== */
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ========== TOP BAR ========== */
+.topbar {
+  position: sticky;
+  top: 0;
+  background: #020617;
+  border-bottom: 1px solid #1e293b;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+}
+
+.topbar h3 {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+/* ========== COMPOSER ========== */
+.composer {
+  padding: 12px;
+  border-bottom: 1px solid #1e293b;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.composer textarea {
+  width: 100%;
+  min-height: 80px;
+  resize: none;
+  background: #020617;
+  color: #e5e7eb;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 10px;
+  outline: none;
+}
+
+.composer textarea::placeholder {
+  color: #94a3b8;
+}
+
+.post-btn {
+  align-self: flex-end;
+}
+
+/* ========== FEED ========== */
+#feed {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ========== POST ========== */
+.post {
+  padding: 12px;
+  border-bottom: 1px solid #1e293b;
+}
+
+.author {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #f8fafc;
+}
+
+.post div:last-child {
+  color: #cbd5f5;
+  line-height: 1.5;
+}
+  </style>
+</head>
+<body>
+
+<script>
+  // 🔒 Frontend auth guard
+  const token = localStorage.getItem("token");
+  if (!token) location.href = "/login";
+</script>
+
+<div class="container">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <h3>Wire</h3>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <!-- Composer -->
+  <div class="composer">
+    <textarea id="content" placeholder="What's happening?"></textarea>
+    <button class="post-btn" onclick="createPost()">Post</button>
+  </div>
+
+  <!-- Feed -->
+  <div id="feed"></div>
+
+</div>
+
+<script src="/static/js/feed.js"></script>
+</body>
+</html>
