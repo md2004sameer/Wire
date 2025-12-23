@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Wire · Add Friends</title>
+  <link rel="stylesheet" href="/static/css/theme.css">
+  <style>
+    body {
+      background:#020617;
+      color:#e5e7eb;
+      font-family: system-ui, sans-serif;
+      padding:24px;
+    }
+    .box {
+      max-width:420px;
+      margin:auto;
+    }
+    input {
+      width:100%;
+      padding:10px;
+      border:1px solid #334155;
+      background:#020617;
+      color:white;
+      border-radius:6px;
+      margin-bottom:12px;
+    }
+    .user {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:8px 0;
+      border-bottom:1px solid #1e293b;
+    }
+    button {
+      padding:6px 12px;
+      background:#2563eb;
+      border:none;
+      border-radius:6px;
+      color:white;
+      cursor:pointer;
+    }
+    .muted { color:#94a3b8; font-size:13px }
+  </style>
+</head>
+<body>
+
+<div class="box">
+  <h3>Add Friends</h3>
+
+  <input id="search" placeholder="Search username" />
+
+  <div id="list"></div>
+  <div class="muted" id="loading"></div>
+</div>
+
+<script>
+let skip = 0;
+const limit = 10;
+let loading = false;
+let finished = false;
+
+const list = document.getElementById("list");
+const loadingEl = document.getElementById("loading");
+const searchInput = document.getElementById("search");
+
+async function loadUsers(reset = false) {
+  if (loading || finished) return;
+  loading = true;
+
+  if (reset) {
+    skip = 0;
+    finished = false;
+    list.innerHTML = "";
+  }
+
+  loadingEl.textContent = "Loading...";
+
+  const q = searchInput.value.trim();
+
+  const res = await fetch(
+    `/friends/users?q=${q}&skip=${skip}&limit=${limit}`,
+    { credentials: "include" }
+  );
+
+  if (res.status === 401) {
+    location.href = "/login";
+    return;
+  }
+
+  const users = await res.json();
+
+  if (users.length === 0) {
+    finished = true;
+    loadingEl.textContent = "";
+    return;
+  }
+
+  users.forEach(u => {
+    const row = document.createElement("div");
+    row.className = "user";
+    row.innerHTML = `
+      <span>${u.username}</span>
+      <button onclick="follow('${u.username}')">Follow</button>
+    `;
+    list.appendChild(row);
+  });
+
+  skip += limit;
+  loading = false;
+  loadingEl.textContent = "";
+}
+
+async function follow(username) {
+  await fetch("/friends/follow", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username })
+  });
+}
+
+searchInput.addEventListener("input", () => {
+  loadUsers(true);
+});
+
+window.addEventListener("scroll", () => {
+  if (
+    window.innerHeight + window.scrollY >=
+    document.body.offsetHeight - 80
+  ) {
+    loadUsers();
+  }
+});
+
+loadUsers();
+</script>
+
+</body>
+</html>

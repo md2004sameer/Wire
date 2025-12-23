@@ -4,23 +4,20 @@ let loading = false;
 let finished = false;
 
 /* =========================
-   Load posts (AUTH REQUIRED)
+   Load posts
    ========================= */
 async function loadPosts() {
   if (loading || finished) return;
   loading = true;
 
-  const token = localStorage.getItem("access_token");
-  if (!token) {
+  const res = await fetch(`/posts?skip=${skip}&limit=${limit}`, {
+    credentials: "include"
+  });
+
+  if (res.status === 401) {
     location.href = "/login";
     return;
   }
-
-  const res = await fetch(`/posts?skip=${skip}&limit=${limit}`, {
-    headers: {
-      "Authorization": `Bearer ${token}`
-    }
-  });
 
   if (!res.ok) {
     console.error("Failed to load posts:", res.status);
@@ -58,23 +55,19 @@ async function loadPosts() {
 async function createPost() {
   const textarea = document.getElementById("content");
   const content = textarea.value.trim();
-
   if (!content) return;
-
-  const token = localStorage.getItem("token");
-  if (!token) {
-    location.href = "/login";
-    return;
-  }
 
   const res = await fetch("/posts", {
     method: "POST",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json"
-    },
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ content })
   });
+
+  if (res.status === 401) {
+    location.href = "/login";
+    return;
+  }
 
   if (!res.ok) {
     alert("Failed to post");
@@ -92,10 +85,7 @@ async function createPost() {
    Infinite scroll
    ========================= */
 window.addEventListener("scroll", () => {
-  if (
-    window.innerHeight + window.scrollY >=
-    document.body.offsetHeight - 100
-  ) {
+  if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100) {
     loadPosts();
   }
 });

@@ -38,6 +38,9 @@ def landing_page():
 @app.get("/profile")
 def profile_page():
     return FileResponse(STATIC_DIR / "profile.html")
+@app.get("/add-friends")
+def add_friends_page():
+    return FileResponse(STATIC_DIR / "add_friends.html")
 
 @app.get("/signup")
 def signup_page():

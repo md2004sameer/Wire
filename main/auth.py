@@ -31,7 +31,6 @@ async def signup(data: UserSignup):
             raise HTTPException(409, "Username already taken")
         raise HTTPException(409, "User already exists")
 
-    # auto-create profile
     await profiles_collection.insert_one({
         "username": username,
         "full_name": "",
@@ -64,12 +63,11 @@ async def login(data: UserLogin, response: Response):
         "email": user["email"]
     })
 
-    # ✅ HttpOnly cookie
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
-        secure=False,      # True in production (HTTPS)
+        secure=False,          # True in production
         samesite="lax",
         max_age=60 * 60 * 24
     )

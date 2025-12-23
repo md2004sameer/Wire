@@ -176,9 +176,32 @@ loadAvatar();
   <div class="topbar">
     <h3>Wire</h3>
     <div class="profile-avatar" onclick="goToProfile()">
-      <span id="avatar-letter">U</span>
+      <span id="avatar-letter">Q</span>
     </div>
   </div>
+    <script>
+async function loadAvatarLetter() {
+  try {
+    const res = await fetch("/auth/me", {
+      credentials: "include"
+    });
+
+    if (res.status === 401) {
+      location.href = "/login";
+      return;
+    }
+
+    const user = await res.json();
+    const letter = user.username?.[0]?.toUpperCase() || "U";
+    document.getElementById("avatar-letter").innerText = letter;
+
+  } catch {
+    // silent fail, keep default U
+  }
+}
+
+loadAvatarLetter();
+</script>
 
   <div class="composer">
     <textarea id="content" placeholder="What's happening?"></textarea>
