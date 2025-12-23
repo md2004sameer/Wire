@@ -11,6 +11,9 @@ from main.feed import router as feed_router
 from main.ws import router as ws_router
 from main.profile import router as profile_router
 from main.database import init_indexes
+from main.friends import router as friends_router
+
+
 
 print("🔥 Wire App Loaded 🔥")
 
@@ -25,6 +28,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = BASE_DIR / "static"
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+app.include_router(friends_router)
 
 @app.get("/")
 def landing_page():

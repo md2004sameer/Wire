@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional
@@ -28,8 +28,8 @@ def get_username(user: dict) -> str:
     username = user.get("username")
     if not username:
         raise HTTPException(
-            status_code=401,
-            detail="Invalid token: username missing"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token"
         )
     return username
 
@@ -46,7 +46,10 @@ async def get_my_profile(user=Depends(get_current_user)):
     )
 
     if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Profile not found"
+        )
 
     return profile
 
@@ -60,13 +63,13 @@ async def update_profile(
 ):
     username = get_username(user)
 
-    update_data = {
-        k: v for k, v in payload.dict().items()
-        if v is not None
-    }
+    update_data = payload.dict(exclude_none=True)
 
     if not update_data:
-        raise HTTPException(status_code=400, detail="No data to update")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No data to update"
+        )
 
     now = datetime.utcnow()
 

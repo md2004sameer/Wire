@@ -15,18 +15,44 @@ client = AsyncIOMotorClient(
 
 db = client["wire"]
 
+# ---------- COLLECTIONS ----------
 users_collection = db["users"]
 posts_collection = db["posts"]
 profiles_collection = db["profiles"]
+relationships_collection = db["relationships"]
 
 
+# ---------- INDEXES ----------
 async def init_indexes():
-    # -------- USERS --------
-    await users_collection.create_index("email", unique=True)
-    await users_collection.create_index("username", unique=True)
+    # -------- USERS (case-insensitive unique) --------
+    await users_collection.create_index(
+        "email",
+        unique=True,
+        collation={"locale": "en", "strength": 2}
+    )
+
+    await users_collection.create_index(
+        "username",
+        unique=True,
+        collation={"locale": "en", "strength": 2}
+    )
 
     # -------- PROFILES --------
-    await profiles_collection.create_index("username", unique=True)
+    await profiles_collection.create_index(
+        "username",
+        unique=True,
+        collation={"locale": "en", "strength": 2}
+    )
+
+    # -------- FRIENDS / FOLLOWS --------
+    await relationships_collection.create_index(
+        [("from_username", 1), ("to_username", 1)],
+        unique=True,
+        collation={"locale": "en", "strength": 2}
+    )
+
+    await relationships_collection.create_index("from_username")
+    await relationships_collection.create_index("to_username")
 
     # -------- POSTS --------
     await posts_collection.create_index("created_at")

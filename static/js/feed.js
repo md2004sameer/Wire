@@ -10,7 +10,7 @@ async function loadPosts() {
   if (loading || finished) return;
   loading = true;
 
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("access_token");
   if (!token) {
     location.href = "/login";
     return;
