@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Explore Users · Wire</title>
+
+  <style>
+    body {
+      background:#020617;
+      color:#e5e7eb;
+      font-family:system-ui, sans-serif;
+      padding:20px;
+    }
+
+    .container {
+      max-width:600px;
+      margin:0 auto;
+    }
+
+    h2 {
+      margin-bottom:12px;
+    }
+
+    input {
+      width:100%;
+      padding:10px;
+      border-radius:6px;
+      border:1px solid #334155;
+      background:#020617;
+      color:white;
+      margin-bottom:12px;
+    }
+
+    ul {
+      list-style:none;
+      padding:0;
+      margin:0;
+    }
+
+    li {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:12px 8px;
+      border-bottom:1px solid #334155;
+    }
+
+    .user-info {
+      display:flex;
+      flex-direction:column;
+    }
+
+    .private {
+      font-size:12px;
+      color:#94a3b8;
+    }
+
+    button {
+      padding:6px 12px;
+      border-radius:999px;
+      border:none;
+      cursor:pointer;
+      background:#2563eb;
+      color:white;
+      font-size:13px;
+      font-weight:600;
+    }
+
+    button.secondary {
+      background:#475569;
+    }
+
+    button:disabled {
+      background:#334155;
+      cursor:not-allowed;
+    }
+  </style>
+</head>
+
+<body>
+<div class="container">
+  <h2>Explore Users</h2>
+
+  <input
+    id="search"
+    placeholder="Search users..."
+    oninput="onSearch()"
+  />
+
+  <ul id="users"></ul>
+</div>
+
+<script>
+let skip = 0;
+const limit = 10;
+let loading = false;
+let finished = false;
+let query = "";
+
+/* ======================
+   FETCH RELATION STATUS
+   ====================== */
+async function getStatus(username) {
+  const res = await fetch(`/friends/status/${username}`, {
+    credentials: "include"
+  });
+  if (!res.ok) return "none";
+  const data = await res.json();
+  return data.status;
+}
+
+/* ======================
+   FETCH USERS
+   ====================== */
+async function fetchUsers(reset = false) {
+  if (loading || finished) return;
+  loading = true;
+
+  if (reset) {
+    skip = 0;
+    finished = false;
+    document.getElementById("users").innerHTML = "";
+  }
+
+  const res = await fetch(
+    `/friends/users?q=${encodeURIComponent(query)}&skip=${skip}&limit=${limit}`,
+    { credentials: "include" }
+  );
+
+  if (!res.ok) {
+    loading = false;
+    return;
+  }
+
+  const users = await res.json();
+
+  if (users.length === 0) {
+    finished = true;
+    loading = false;
+    return;
+  }
+
+  for (const user of users) {
+    await renderUser(user);
+  }
+
+  skip += limit;
+  loading = false;
+}
+
+/* ======================
+   RENDER USER ROW (SYNCED)
+   ====================== */
+async function renderUser(user) {
+  const li = document.createElement("li");
+
+  const info = document.createElement("div");
+  info.className = "user-info";
+  info.innerHTML = `
+    <strong>${user.username}</strong>
+    ${user.is_private ? `<span class="private">Private</span>` : ``}
+  `;
+
+  const btn = document.createElement("button");
+  btn.innerText = "Loading...";
+  btn.disabled = true;
+
+  li.appendChild(info);
+  li.appendChild(btn);
+  document.getElementById("users").appendChild(li);
+
+  const status = await getStatus(user.username);
+
+  if (status === "none") {
+    btn.innerText = "Follow";
+    btn.disabled = false;
+    btn.onclick = () => follow(btn, user.username);
+  }
+
+  else if (status === "pending" || status === "incoming_request") {
+    btn.innerText = "Requested";
+    btn.classList.add("secondary");
+    btn.disabled = true;
+  }
+
+  else if (status === "following") {
+    btn.innerText = "Following ✓";
+    btn.classList.add("secondary");
+    btn.disabled = false;
+    btn.onclick = () => unfollow(btn, user.username);
+  }
+
+  else if (status === "blocked") {
+    btn.innerText = "Blocked";
+    btn.disabled = true;
+  }
+}
+
+/* ======================
+   FOLLOW USER
+   ====================== */
+async function follow(btn, username) {
+  btn.disabled = true;
+  btn.innerText = "Sending...";
+
+  const res = await fetch("/friends/follow", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username })
+  });
+
+  if (!res.ok) {
+    btn.innerText = "Follow";
+    btn.disabled = false;
+    return;
+  }
+
+  const data = await res.json();
+
+  if (data.status === "pending") {
+    btn.innerText = "Requested";
+    btn.classList.add("secondary");
+    btn.disabled = true;
+  }
+
+  if (data.status === "accepted") {
+    btn.innerText = "Following ✓";
+    btn.classList.add("secondary");
+    btn.disabled = false;
+    btn.onclick = () => unfollow(btn, username);
+  }
+}
+
+/* ======================
+   UNFOLLOW USER
+   ====================== */
+async function unfollow(btn, username) {
+  btn.disabled = true;
+
+  await fetch("/friends/unfollow", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username })
+  });
+
+  btn.innerText = "Follow";
+  btn.classList.remove("secondary");
+  btn.disabled = false;
+  btn.onclick = () => follow(btn, username);
+}
+
+/* ======================
+   SEARCH
+   ====================== */
+function onSearch() {
+  query = document.getElementById("search").value.trim();
+  fetchUsers(true);
+}
+
+/* ======================
+   INFINITE SCROLL
+   ====================== */
+window.addEventListener("scroll", () => {
+  if (
+    window.innerHeight + window.scrollY >=
+    document.body.offsetHeight - 200
+  ) {
+    fetchUsers();
+  }
+});
+
+/* ======================
+   INITIAL LOAD
+   ====================== */
+fetchUsers();
+</script>
+</body>
+</html>

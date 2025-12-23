@@ -15,11 +15,8 @@
 
 <script>
 async function login() {
-  const emailInput = document.getElementById("email");
-  const passwordInput = document.getElementById("password");
-
-  const email = emailInput.value.trim();
-  const password = passwordInput.value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
 
   if (!email || !password) {
     alert("Email and password required");
@@ -30,24 +27,21 @@ async function login() {
     const res = await fetch("/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",   // ✅ REQUIRED for cookies
       body: JSON.stringify({ email, password })
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      alert(err.detail || "Invalid credentials");
+      alert("Invalid credentials");
       return;
     }
 
-    const data = await res.json();
+    // ✅ backend sets HttpOnly cookie
+    // ❌ DO NOT store token anywhere
 
-    // ✅ single source of truth
-    localStorage.setItem("access_token", data.access_token);
-
-    // ✅ hard redirect to reset state
     window.location.replace("/home");
 
-  } catch (err) {
+  } catch {
     alert("Network error. Please try again.");
   }
 }

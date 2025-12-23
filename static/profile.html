@@ -2,343 +2,251 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Wire · Profile</title>
-  <link rel="stylesheet" href="/static/css/theme.css">
+  <title>Profile · Wire</title>
 
   <style>
     body {
       background:#020617;
       color:#e5e7eb;
-      font-family: system-ui, sans-serif;
-      padding:40px;
-    }
-
-    .profile {
-      max-width:600px;
-      margin:auto;
-      background:#020617;
-      border:1px solid #1e293b;
-      border-radius:12px;
+      font-family:system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin:0;
       padding:24px;
     }
 
+    .container {
+      max-width:640px;
+      margin:0 auto;
+    }
+
+    .header {
+      display:flex;
+      gap:20px;
+      align-items:center;
+      margin-bottom:24px;
+    }
+
     .avatar {
-      width:88px;
-      height:88px;
+      width:96px;
+      height:96px;
       border-radius:50%;
       background:#2563eb;
       display:flex;
       align-items:center;
       justify-content:center;
-      font-size:36px;
+      font-size:40px;
       font-weight:700;
-      margin:0 auto 16px;
+      flex-shrink:0;
     }
 
-    label {
-      display:block;
-      font-size:13px;
-      color:#94a3b8;
-      margin-top:14px;
-    }
-
-    input, textarea {
-      width:100%;
-      margin-top:6px;
-      padding:10px;
-      background:#020617;
-      color:#e5e7eb;
-      border:1px solid #334155;
-      border-radius:8px;
-      outline:none;
-    }
-
-    textarea {
-      resize:none;
-      min-height:80px;
-    }
-
-    .row {
-      display:flex;
-      gap:12px;
-    }
-
-    .row > div {
+    .identity {
       flex:1;
     }
 
+    .username {
+      font-size:20px;
+      font-weight:700;
+    }
+
+    .bio {
+      margin-top:6px;
+      color:#cbd5e1;
+      font-size:14px;
+      line-height:1.5;
+    }
+
+    .stats {
+      display:flex;
+      gap:24px;
+      margin-top:14px;
+    }
+
+    .stat {
+      cursor:pointer;
+    }
+
+    .stat strong {
+      font-size:15px;
+    }
+
+    .stat span {
+      margin-left:4px;
+      color:#94a3b8;
+      font-size:13px;
+    }
+
+    .section {
+      border-top:1px solid #1e293b;
+      padding-top:20px;
+      margin-top:24px;
+    }
+
+    .field {
+      margin-bottom:14px;
+    }
+
+    .label {
+      font-size:12px;
+      color:#94a3b8;
+      margin-bottom:4px;
+    }
+
+    .value {
+      font-size:14px;
+      color:#e5e7eb;
+    }
+
     .actions {
-      margin-top:20px;
       display:flex;
       justify-content:space-between;
-      align-items:center;
+      margin-top:28px;
     }
 
     button {
       padding:10px 18px;
-      background:#2563eb;
-      border:none;
       border-radius:8px;
-      color:white;
+      border:none;
       font-weight:600;
       cursor:pointer;
     }
 
-    button:disabled {
-      background:#475569;
-      cursor:not-allowed;
-    }
-
-    .hidden {
-      display:none;
-    }
-
-    .status {
-      font-size:14px;
-    }
-
-    .warn { color:#facc15; }
-    .error { color:#ef4444; }
-    .success { color:#22c55e; }
-
-    /* View-only mode */
-    .view-only input,
-    .view-only textarea {
-      border-color:transparent;
-      background:transparent;
-      padding-left:0;
-    }
+    .primary { background:#2563eb; color:white; }
+    .secondary { background:#334155; color:white; }
   </style>
 </head>
+
 <body>
+<div class="container">
 
-<script>
-const token = localStorage.getItem("access_token");
-if (!token) location.replace("/login");
-</script>
+  <!-- HEADER -->
+  <div class="header">
+    <div class="avatar" id="avatar">U</div>
 
-<div class="profile view-only" id="profileBox">
+    <div class="identity">
+      <div class="username" id="username">username</div>
+      <div class="bio" id="bio">Bio goes here</div>
 
-  <div class="avatar" id="avatar">U</div>
-
-  <label>Full name</label>
-  <input id="full_name">
-
-  <label>Bio</label>
-  <textarea id="bio"></textarea>
-
-  <div class="row">
-    <div>
-      <label>Gender</label>
-      <input id="gender">
-    </div>
-    <div>
-      <label>Date of birth</label>
-      <input id="date_of_birth" placeholder="YYYY-MM-DD">
+      <div class="stats">
+        <div class="stat" onclick="goToFriends('followers')">
+          <strong id="followersCount">0</strong><span>Followers</span>
+        </div>
+        <div class="stat" onclick="goToFriends('following')">
+          <strong id="followingCount">0</strong><span>Following</span>
+        </div>
+      </div>
     </div>
   </div>
 
-  <label>Website</label>
-  <input id="website">
+  <!-- CONTACT -->
+  <div class="section">
+    <div class="field">
+      <div class="label">Email</div>
+      <div class="value" id="email">—</div>
+    </div>
+  </div>
 
-  <label>Location</label>
-  <input id="location">
+  <!-- DETAILS -->
+  <div class="section">
+    <div class="field">
+      <div class="label">Gender</div>
+      <div class="value" id="gender">—</div>
+    </div>
 
-  <label>Avatar URL</label>
-  <input id="avatar_url">
+    <div class="field">
+      <div class="label">Date of birth</div>
+      <div class="value" id="dob">—</div>
+    </div>
 
-  <label style="margin-top:12px">
-    <input type="checkbox" id="is_private"> Private profile
-  </label>
+    <div class="field">
+      <div class="label">Website</div>
+      <div class="value" id="website">—</div>
+    </div>
 
+    <div class="field">
+      <div class="label">Location</div>
+      <div class="value" id="location">—</div>
+    </div>
+  </div>
+
+  <!-- ACTIONS -->
   <div class="actions">
-    <div id="status" class="status"></div>
-
-    <div>
-        <button id="logoutBtn" onclick="logout()" style="
-  background:#dc2626;
-  margin-left:10px;
-">
-  Logout
-</button>
-      <button id="editBtn" onclick="enableEdit()">Edit</button>
-      <button id="cancelBtn" class="hidden" onclick="cancelEdit()">Cancel</button>
-      <button id="saveBtn" class="hidden" onclick="saveProfile()">Save</button>
-    </div>
+    <button class="secondary" onclick="logout()">Logout</button>
+    <button class="primary" onclick="enableEdit()">Edit profile</button>
   </div>
+
 </div>
+
 <script>
-function logout() {
-  // remove auth token
-  localStorage.removeItem("access_token");
-
-  // optional: clear cached profile data if you add it later
-  localStorage.removeItem("profile");
-
-  // hard redirect to login
-  window.location.replace("/login");
-}
-</script>
-<script>
-const statusEl = document.getElementById("status");
-const saveBtn = document.getElementById("saveBtn");
-const editBtn = document.getElementById("editBtn");
-const cancelBtn = document.getElementById("cancelBtn");
-const profileBox = document.getElementById("profileBox");
-
-let profileExists = true;
-
-function setReadOnly(state) {
-  document.querySelectorAll("input, textarea").forEach(el => {
-    if (el.type === "checkbox") el.disabled = state;
-    else el.readOnly = state;
+/* ======================
+   AUTH GUARD (COOKIE)
+   ====================== */
+async function authGuard() {
+  const res = await fetch("/auth/me", {
+    credentials: "include"
   });
+
+  if (res.status === 401) {
+    location.replace("/login");
+  }
 }
 
-function enableEdit() {
-  profileBox.classList.remove("view-only");
-  setReadOnly(false);
-  editBtn.classList.add("hidden");
-  saveBtn.classList.remove("hidden");
-  cancelBtn.classList.remove("hidden");
-}
+authGuard();
 
-function cancelEdit() {
-  profileBox.classList.add("view-only");
-  setReadOnly(true);
-  editBtn.classList.remove("hidden");
-  saveBtn.classList.add("hidden");
-  cancelBtn.classList.add("hidden");
-  loadProfile();
+/* ---------- REDIRECT ---------- */
+function goToFriends(type) {
+  location.href = `/friends-list?type=${type}`;
 }
 
 /* ---------- LOAD PROFILE ---------- */
-
 async function loadProfile() {
-  statusEl.textContent = "Loading profile…";
-  statusEl.className = "status";
+  const res = await fetch("/profile/me", {
+    credentials: "include"
+  });
 
-  try {
-    const res = await fetch("/profile/me", {
-      headers: { Authorization: "Bearer " + token }
-    });
+  if (!res.ok) return;
 
-    if (res.status === 401 || res.status === 403) {
-      localStorage.removeItem("access_token");
-      location.replace("/login");
-      return;
-    }
+  const p = await res.json();
 
-    if (res.status === 404) {
-      profileExists = false;
-      statusEl.textContent = "No profile yet. Click Edit to create one.";
-      statusEl.className = "status warn";
-      setReadOnly(true);
-      return;
-    }
+  username.innerText = p.username || "user";
+  bio.innerText = p.bio || "No bio yet";
+  email.innerText = p.email || "—";
+  gender.innerText = p.gender || "—";
+  dob.innerText = p.date_of_birth || "—";
+  website.innerText = p.website || "—";
+  location.innerText = p.location || "—";
 
-    if (!res.ok) {
-      statusEl.textContent = "Failed to load profile";
-      statusEl.className = "status error";
-      setReadOnly(true);
-      return;
-    }
-
-    const p = await res.json();
-
-    full_name.value = p.full_name || "";
-    bio.value = p.bio || "";
-    gender.value = p.gender || "";
-    date_of_birth.value = p.date_of_birth || "";
-    website.value = p.website || "";
-    location.value = p.location || "";
-    avatar_url.value = p.avatar_url || "";
-    is_private.checked = p.is_private || false;
-
-    avatar.textContent = (p.full_name || "U")[0].toUpperCase();
-    statusEl.textContent = "";
-    setReadOnly(true);
-
-  } catch {
-    statusEl.textContent = "Network error";
-    statusEl.className = "status error";
-    setReadOnly(true);
-  }
+  avatar.innerText = (p.username || "U")[0].toUpperCase();
 }
 
-/* ---------- SAVE PROFILE ---------- */
+/* ---------- LOAD COUNTS ---------- */
+async function loadCounts() {
+  const followers = await fetch("/friends/followers", {
+    credentials: "include"
+  }).then(r => r.json());
 
-async function saveProfile() {
-  saveBtn.disabled = true;
-  statusEl.textContent = "Saving…";
-  statusEl.className = "status";
+  const following = await fetch("/friends/following", {
+    credentials: "include"
+  }).then(r => r.json());
 
-  const payload = {
-    full_name: full_name.value || null,
-    bio: bio.value || null,
-    gender: gender.value || null,
-    date_of_birth: date_of_birth.value || null,
-    website: website.value || null,
-    location: location.value || null,
-    avatar_url: avatar_url.value || null,
-    is_private: is_private.checked
-  };
+  followersCount.innerText = followers.count;
+  followingCount.innerText = following.count;
+}
 
-  try {
-    const res = await fetch("/profile/me", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + token
-      },
-      body: JSON.stringify(payload)
-    });
+/* ---------- ACTIONS ---------- */
+function enableEdit() {
+  location.href = "/profile/edit";
+}
 
-    if (res.status === 401 || res.status === 403) {
-      localStorage.removeItem("access_token");
-      location.replace("/login");
-      return;
-    }
+async function logout() {
+  await fetch("/auth/logout", {
+    method: "POST",
+    credentials: "include"
+  });
 
-    if (!res.ok) {
-      statusEl.textContent = "Save failed";
-      statusEl.className = "status error";
-      saveBtn.disabled = false;
-      return;
-    }
-
-    statusEl.textContent = "Profile saved";
-    statusEl.className = "status success";
-    profileExists = true;
-
-    cancelEdit(); // back to view mode
-
-  } catch {
-    statusEl.textContent = "Network error";
-    statusEl.className = "status error";
-  } finally {
-    saveBtn.disabled = false;
-  }
+  location.replace("/login");
 }
 
 loadProfile();
+loadCounts();
 </script>
-
-<!--
-BACKEND REQUIREMENT (IMPORTANT):
-
-PUT /profile/me MUST use upsert,
-otherwise first save will always fail.
-
-await profiles_collection.update_one(
-    {"user_id": ObjectId(user["user_id"])},
-    {
-        "$set": update_data,
-        "$setOnInsert": {"created_at": datetime.utcnow()}
-    },
-    upsert=True
-)
--->
-
 </body>
 </html>

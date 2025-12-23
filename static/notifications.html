@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Notifications · Wire</title>
+
+  <style>
+    body {
+      background:#020617;
+      color:#e5e7eb;
+      font-family:system-ui, sans-serif;
+      padding:20px;
+    }
+
+    .container {
+      max-width:600px;
+      margin:0 auto;
+    }
+
+    h2 {
+      margin-bottom:16px;
+    }
+
+    ul {
+      list-style:none;
+      padding:0;
+      margin:0;
+    }
+
+    li {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:12px 8px;
+      border-bottom:1px solid #334155;
+    }
+
+    .text {
+      display:flex;
+      flex-direction:column;
+    }
+
+    .meta {
+      font-size:12px;
+      color:#94a3b8;
+      margin-top:2px;
+    }
+
+    button {
+      padding:6px 12px;
+      border-radius:999px;
+      border:none;
+      cursor:pointer;
+      font-size:13px;
+      font-weight:600;
+    }
+
+    .accept {
+      background:#2563eb;
+      color:white;
+    }
+
+    .ignore {
+      background:#475569;
+      color:white;
+      margin-left:6px;
+    }
+
+    .empty {
+      text-align:center;
+      color:#94a3b8;
+      padding:40px;
+    }
+  </style>
+</head>
+
+<body>
+<div class="container">
+  <h2>Notifications</h2>
+  <ul id="notifications"></ul>
+</div>
+
+<script>
+/* =========================
+   AUTH GUARD
+   ========================= */
+async function authGuard() {
+  const res = await fetch("/auth/me", {
+    credentials: "include"
+  });
+  if (res.status === 401) {
+    location.href = "/login";
+    return false;
+  }
+  return true;
+}
+
+/* =========================
+   LOAD NOTIFICATIONS
+   ========================= */
+async function loadNotifications() {
+  const res = await fetch("/friends/notifications", {
+    credentials: "include"
+  });
+
+  if (!res.ok) return;
+
+  const notifications = await res.json();
+  const ul = document.getElementById("notifications");
+  ul.innerHTML = "";
+
+  if (notifications.length === 0) {
+    ul.innerHTML = `<div class="empty">No notifications</div>`;
+    return;
+  }
+
+  notifications.forEach(n => {
+    if (n.type === "follow_request") {
+      renderFollowRequest(n);
+    }
+  });
+}
+
+/* =========================
+   RENDER FOLLOW REQUEST
+   ========================= */
+function renderFollowRequest(n) {
+  const li = document.createElement("li");
+
+  li.innerHTML = `
+    <div class="text">
+      <strong>${n.from}</strong>
+      <span class="meta">
+        sent you a friend request · ${new Date(n.created_at).toLocaleString()}
+      </span>
+    </div>
+    <div>
+      <button class="accept" onclick="acceptRequest('${n.from}')">Accept</button>
+      <button class="ignore" onclick="ignoreRequest('${n.from}')">Ignore</button>
+    </div>
+  `;
+
+  document.getElementById("notifications").appendChild(li);
+}
+
+/* =========================
+   ACCEPT REQUEST
+   ========================= */
+async function acceptRequest(username) {
+  await fetch("/friends/accept", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username })
+  });
+
+  loadNotifications();
+}
+
+/* =========================
+   IGNORE REQUEST
+   ========================= */
+async function ignoreRequest(username) {
+  await fetch("/friends/reject", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username })
+  });
+
+  loadNotifications();
+}
+
+/* =========================
+   INIT
+   ========================= */
+authGuard().then(ok => {
+  if (ok) loadNotifications();
+});
+</script>
+</body>
+</html>

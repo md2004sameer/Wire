@@ -2,9 +2,11 @@ let skip = 0;
 const limit = 10;
 let loading = false;
 let finished = false;
+let newestTimestamp = null;
+let pendingNewPosts = [];
 
 /* =========================
-   Load posts
+   Load initial feed
    ========================= */
 async function loadPosts() {
   if (loading || finished) return;
@@ -19,12 +21,6 @@ async function loadPosts() {
     return;
   }
 
-  if (!res.ok) {
-    console.error("Failed to load posts:", res.status);
-    loading = false;
-    return;
-  }
-
   const data = await res.json();
 
   if (data.length === 0) {
@@ -35,18 +31,67 @@ async function loadPosts() {
 
   const feed = document.getElementById("feed");
 
-  data.forEach(p => {
-    const div = document.createElement("div");
-    div.className = "post";
-    div.innerHTML = `
-      <div class="author">${p.author}</div>
-      <div class="post-content">${p.content}</div>
-    `;
-    feed.appendChild(div);
-  });
+  data.forEach(p => renderPost(p, false));
+
+  if (!newestTimestamp && data.length > 0) {
+    newestTimestamp = data[0].created_at;
+  }
 
   skip += limit;
   loading = false;
+}
+
+/* =========================
+   Poll for new posts
+   ========================= */
+async function pollNewPosts() {
+  if (!newestTimestamp) return;
+
+  const res = await fetch(`/posts?skip=0&limit=5`, {
+    credentials: "include"
+  });
+
+  if (!res.ok) return;
+
+  const data = await res.json();
+
+  const fresh = data.filter(
+    p => new Date(p.created_at) > new Date(newestTimestamp)
+  );
+
+  if (fresh.length === 0) return;
+
+  pendingNewPosts = fresh;
+  document.getElementById("new-posts-banner").classList.remove("hidden");
+}
+
+/* =========================
+   Load new posts on click
+   ========================= */
+function loadNewPosts() {
+  const feed = document.getElementById("feed");
+
+  pendingNewPosts.reverse().forEach(p => renderPost(p, true));
+
+  newestTimestamp = pendingNewPosts[0].created_at;
+  pendingNewPosts = [];
+
+  document.getElementById("new-posts-banner").classList.add("hidden");
+}
+
+/* =========================
+   Render post
+   ========================= */
+function renderPost(p, prepend) {
+  const div = document.createElement("div");
+  div.className = "post";
+  div.innerHTML = `
+    <div class="author">${p.author}</div>
+    <div class="post-content">${p.content}</div>
+  `;
+
+  const feed = document.getElementById("feed");
+  prepend ? feed.prepend(div) : feed.appendChild(div);
 }
 
 /* =========================
@@ -69,16 +114,7 @@ async function createPost() {
     return;
   }
 
-  if (!res.ok) {
-    alert("Failed to post");
-    return;
-  }
-
   textarea.value = "";
-  skip = 0;
-  finished = false;
-  document.getElementById("feed").innerHTML = "";
-  loadPosts();
 }
 
 /* =========================
@@ -91,13 +127,7 @@ window.addEventListener("scroll", () => {
 });
 
 /* =========================
-   Navigation
-   ========================= */
-function goToProfile() {
-  location.href = "/profile";
-}
-
-/* =========================
-   Initial load
+   Boot
    ========================= */
 loadPosts();
+setInterval(pollNewPosts, 10000);

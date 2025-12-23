@@ -13,8 +13,6 @@ from main.profile import router as profile_router
 from main.database import init_indexes
 from main.friends import router as friends_router
 
-
-
 print("🔥 Wire App Loaded 🔥")
 
 app = FastAPI()
@@ -29,18 +27,37 @@ STATIC_DIR = BASE_DIR / "static"
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+# ---------- API ROUTERS ----------
 app.include_router(friends_router)
+app.include_router(auth_router)
+app.include_router(feed_router)
+app.include_router(ws_router)
+app.include_router(profile_router)
 
+# ---------- PAGES ----------
 @app.get("/")
 def landing_page():
     return FileResponse(STATIC_DIR / "landing.html")
 
+@app.get("/home")
+def home_page():
+    return FileResponse(STATIC_DIR / "home.html")
+
 @app.get("/profile")
 def profile_page():
     return FileResponse(STATIC_DIR / "profile.html")
-@app.get("/add-friends")
-def add_friends_page():
-    return FileResponse(STATIC_DIR / "add_friends.html")
+
+@app.get("/users")
+def users_page():
+    return FileResponse(STATIC_DIR / "users.html")
+
+@app.get("/friends-list")
+def friends_list_page():
+    return FileResponse(STATIC_DIR / "friends-list.html")
+
+@app.get("/notifications")
+def notifications_page():
+    return FileResponse(STATIC_DIR / "notifications.html")
 
 @app.get("/signup")
 def signup_page():
@@ -49,12 +66,3 @@ def signup_page():
 @app.get("/login")
 def login_page():
     return FileResponse(STATIC_DIR / "login.html")
-
-@app.get("/home")
-def home_page():
-    return FileResponse(STATIC_DIR / "home.html")
-
-app.include_router(auth_router)
-app.include_router(feed_router)
-app.include_router(ws_router)
-app.include_router(profile_router)

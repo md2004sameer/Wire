@@ -60,3 +60,17 @@ async def get_posts(skip: int = 0, limit: int = 10):
     )
 
     return [post async for post in cursor]
+
+@router.get("/latest")
+async def latest_post():
+    post = await (
+        posts_collection
+        .find({}, {"_id": 0, "created_at": 1})
+        .sort("created_at", -1)
+        .limit(1)
+        .to_list(1)
+    )
+
+    return {
+        "latest": post[0]["created_at"] if post else None
+    }

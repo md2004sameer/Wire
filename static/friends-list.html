@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Friends · Wire</title>
+
+  <style>
+    body {
+      background:#020617;
+      color:#e5e7eb;
+      font-family:system-ui, sans-serif;
+      padding:20px;
+    }
+
+    .container {
+      max-width:600px;
+      margin:0 auto;
+    }
+
+    h2 {
+      margin-bottom:16px;
+    }
+
+    ul {
+      list-style:none;
+      padding:0;
+      margin:0;
+    }
+
+    li {
+      padding:12px 8px;
+      border-bottom:1px solid #334155;
+      cursor:pointer;
+    }
+
+    li:hover {
+      background:#020617;
+    }
+
+    .empty {
+      text-align:center;
+      color:#94a3b8;
+      padding:40px;
+    }
+  </style>
+</head>
+
+<body>
+<div class="container">
+  <h2 id="title"></h2>
+  <ul id="list"></ul>
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const type = params.get("type"); // followers | following
+
+if (!type) location.replace("/profile");
+
+document.getElementById("title").innerText =
+  type === "followers" ? "Followers" : "Following";
+
+async function loadFriends() {
+  const res = await fetch(`/friends/${type}`, {
+    credentials: "include"
+  });
+
+  if (!res.ok) return;
+
+  const data = await res.json();
+  const ul = document.getElementById("list");
+  ul.innerHTML = "";
+
+  if (data.users.length === 0) {
+    ul.innerHTML = `<div class="empty">No users yet</div>`;
+    return;
+  }
+
+  data.users.forEach(username => {
+    const li = document.createElement("li");
+    li.textContent = username;
+    li.onclick = () => location.href = `/profile/${username}`;
+    ul.appendChild(li);
+  });
+}
+
+loadFriends();
+</script>
+</body>
+</html>

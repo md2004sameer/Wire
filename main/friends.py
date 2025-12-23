@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from datetime import datetime
 from pydantic import BaseModel
 from pymongo.errors import DuplicateKeyError
+from typing import List
 
 from main.deps import get_current_user
 from main.database import relationships_collection, profiles_collection
@@ -9,13 +10,17 @@ from main.database import relationships_collection, profiles_collection
 router = APIRouter(prefix="/friends", tags=["Friends"])
 
 
-# ---------- SCHEMA ----------
+# =======================
+# SCHEMA
+# =======================
 
 class UsernamePayload(BaseModel):
     username: str
 
 
-# ---------- HELPERS ----------
+# =======================
+# HELPERS
+# =======================
 
 def get_username(user: dict) -> str:
     username = user.get("username")
@@ -24,10 +29,12 @@ def get_username(user: dict) -> str:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token"
         )
-    return username
+    return username.lower()
 
 
-# ---------- FOLLOW / REQUEST ----------
+# =======================
+# FOLLOW / REQUEST
+# =======================
 
 @router.post("/follow", status_code=status.HTTP_201_CREATED)
 async def follow_user(
@@ -47,9 +54,16 @@ async def follow_user(
         {"username": to_username},
         {"is_private": 1}
     )
-
     if not target:
         raise HTTPException(404, "User not found")
+
+    blocked = await relationships_collection.find_one({
+        "from_username": to_username,
+        "to_username": from_username,
+        "status": "blocked"
+    })
+    if blocked:
+        raise HTTPException(403, "You are blocked")
 
     status_value = "pending" if target.get("is_private") else "accepted"
     now = datetime.utcnow()
@@ -68,7 +82,9 @@ async def follow_user(
     return {"status": status_value}
 
 
-# ---------- ACCEPT REQUEST ----------
+# =======================
+# ACCEPT REQUEST
+# =======================
 
 @router.post("/accept")
 async def accept_request(
@@ -98,7 +114,9 @@ async def accept_request(
     return {"status": "accepted"}
 
 
-# ---------- REJECT REQUEST ----------
+# =======================
+# REJECT REQUEST
+# =======================
 
 @router.post("/reject")
 async def reject_request(
@@ -120,28 +138,91 @@ async def reject_request(
     return {"status": "rejected"}
 
 
-# ---------- REMOVE / UNFOLLOW ----------
+# =======================
+# UNFOLLOW
+# =======================
 
-@router.post("/remove")
-async def remove_relationship(
+@router.post("/unfollow")
+async def unfollow(
     payload: UsernamePayload,
     user=Depends(get_current_user)
 ):
-    from_username = get_username(user)
-    to_username = payload.username.strip().lower()
+    me = get_username(user)
+    target = payload.username.strip().lower()
 
     result = await relationships_collection.delete_one({
-        "from_username": from_username,
-        "to_username": to_username
+        "from_username": me,
+        "to_username": target
     })
 
     if result.deleted_count == 0:
-        raise HTTPException(404, "Relationship not found")
+        raise HTTPException(404, "Not following")
+
+    return {"status": "unfollowed"}
+
+
+# =======================
+# REMOVE FOLLOWER
+# =======================
+
+@router.post("/remove-follower")
+async def remove_follower(
+    payload: UsernamePayload,
+    user=Depends(get_current_user)
+):
+    me = get_username(user)
+    follower = payload.username.strip().lower()
+
+    result = await relationships_collection.delete_one({
+        "from_username": follower,
+        "to_username": me
+    })
+
+    if result.deleted_count == 0:
+        raise HTTPException(404, "Follower not found")
 
     return {"status": "removed"}
 
 
-# ---------- LIST FOLLOWING ----------
+# =======================
+# BLOCK USER
+# =======================
+
+@router.post("/block")
+async def block_user(
+    payload: UsernamePayload,
+    user=Depends(get_current_user)
+):
+    me = get_username(user)
+    target = payload.username.strip().lower()
+
+    if me == target:
+        raise HTTPException(400, "Cannot block yourself")
+
+    await relationships_collection.delete_many({
+        "$or": [
+            {"from_username": me, "to_username": target},
+            {"from_username": target, "to_username": me}
+        ]
+    })
+
+    try:
+        await relationships_collection.insert_one({
+            "from_username": me,
+            "to_username": target,
+            "status": "blocked",
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        })
+    except DuplicateKeyError:
+        pass
+
+    return {"status": "blocked"}
+
+
+# =======================
+# LIST FOLLOWING
+# =======================
 
 @router.get("/following")
 async def list_following(user=Depends(get_current_user)):
@@ -156,7 +237,9 @@ async def list_following(user=Depends(get_current_user)):
     return {"count": len(users), "users": users}
 
 
-# ---------- LIST FOLLOWERS ----------
+# =======================
+# LIST FOLLOWERS
+# =======================
 
 @router.get("/followers")
 async def list_followers(user=Depends(get_current_user)):
@@ -171,7 +254,9 @@ async def list_followers(user=Depends(get_current_user)):
     return {"count": len(users), "users": users}
 
 
-# ---------- LIST PENDING ----------
+# =======================
+# LIST PENDING REQUESTS
+# =======================
 
 @router.get("/requests")
 async def list_requests(user=Depends(get_current_user)):
@@ -186,7 +271,9 @@ async def list_requests(user=Depends(get_current_user)):
     return {"count": len(users), "users": users}
 
 
-# ---------- RELATIONSHIP STATUS ----------
+# =======================
+# SINGLE STATUS
+# =======================
 
 @router.get("/status/{username}")
 async def relationship_status(
@@ -205,7 +292,9 @@ async def relationship_status(
     )
 
     if outgoing:
-        return {"status": outgoing["status"]}
+        return {
+            "status": "following" if outgoing["status"] == "accepted" else outgoing["status"]
+        }
 
     incoming = await relationships_collection.find_one(
         {
@@ -221,7 +310,61 @@ async def relationship_status(
     return {"status": "none"}
 
 
-# ---------- LIST USERS (SEARCH + PAGINATION) ----------
+# =======================
+# 🔥 BATCH STATUS (NEW)
+# =======================
+
+@router.post("/status/batch")
+async def batch_relationship_status(
+    usernames: List[str],
+    user=Depends(get_current_user)
+):
+    viewer = get_username(user)
+
+    targets = list({
+        u.strip().lower()
+        for u in usernames
+        if u.strip().lower() and u.strip().lower() != viewer
+    })
+
+    if not targets:
+        return {}
+
+    status_map = {}
+
+    # outgoing relationships
+    cursor = relationships_collection.find(
+        {
+            "from_username": viewer,
+            "to_username": {"$in": targets}
+        },
+        {"_id": 0, "to_username": 1, "status": 1}
+    )
+
+    async for d in cursor:
+        status_map[d["to_username"]] = (
+            "following" if d["status"] == "accepted" else d["status"]
+        )
+
+    # incoming pending requests
+    cursor = relationships_collection.find(
+        {
+            "from_username": {"$in": targets},
+            "to_username": viewer,
+            "status": "pending"
+        },
+        {"_id": 0, "from_username": 1}
+    )
+
+    async for d in cursor:
+        status_map.setdefault(d["from_username"], "incoming_request")
+
+    return {u: status_map.get(u, "none") for u in targets}
+
+
+# =======================
+# USER SEARCH
+# =======================
 
 @router.get("/users")
 async def list_users(
@@ -252,16 +395,31 @@ async def list_users(
 
     return users
 
+# =======================
+# NOTIFICATIONS
+# =======================
 
-# ---------- INCOMING (MINIMAL) ----------
-
-@router.get("/incoming")
-async def incoming_requests(user=Depends(get_current_user)):
+@router.get("/notifications")
+async def notifications(user=Depends(get_current_user)):
     username = get_username(user)
 
     cursor = relationships_collection.find(
-        {"to_username": username, "status": "pending"},
-        {"_id": 0, "from_username": 1}
-    )
+        {
+            "to_username": username,
+            "status": "pending"
+        },
+        {
+            "_id": 0,
+            "from_username": 1,
+            "created_at": 1
+        }
+    ).sort("created_at", -1)
 
-    return [d["from_username"] async for d in cursor]
+    return [
+        {
+            "type": "follow_request",
+            "from": d["from_username"],
+            "created_at": d["created_at"]
+        }
+        async for d in cursor
+    ]

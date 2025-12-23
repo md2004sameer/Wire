@@ -24,7 +24,8 @@ relationships_collection = db["relationships"]
 
 # ---------- INDEXES ----------
 async def init_indexes():
-    # -------- USERS (case-insensitive unique) --------
+
+    # -------- USERS --------
     await users_collection.create_index(
         "email",
         unique=True,
@@ -44,15 +45,23 @@ async def init_indexes():
         collation={"locale": "en", "strength": 2}
     )
 
-    # -------- FRIENDS / FOLLOWS --------
+    # -------- RELATIONSHIPS (FOLLOW SYSTEM) --------
     await relationships_collection.create_index(
         [("from_username", 1), ("to_username", 1)],
         unique=True,
         collation={"locale": "en", "strength": 2}
     )
 
-    await relationships_collection.create_index("from_username")
-    await relationships_collection.create_index("to_username")
+    # Query optimization
+    await relationships_collection.create_index(
+        [("to_username", 1), ("status", 1)]
+    )
+
+    await relationships_collection.create_index(
+        [("from_username", 1), ("status", 1)]
+    )
 
     # -------- POSTS --------
-    await posts_collection.create_index("created_at")
+    await posts_collection.create_index(
+        [("created_at", -1)]
+    )
