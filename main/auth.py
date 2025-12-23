@@ -1,15 +1,33 @@
-from fastapi import APIRouter, HTTPException, status, Response
+from fastapi import APIRouter, HTTPException, status, Response, Depends
 from datetime import datetime
 from pymongo.errors import DuplicateKeyError
+import os
 
 from main.database import users_collection, profiles_collection
 from main.models import UserSignup, UserLogin
 from main.security import hash_password, verify_password, create_access_token
+from main.deps import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
+ENV = os.getenv("ENV", "development")
 
-# ---------------- SIGNUP ----------------
+
+# ======================
+# ME (COOKIE AUTH)
+# ======================
+
+@router.get("/me")
+async def me(user=Depends(get_current_user)):
+    return {
+        "username": user["username"],
+        "email": user.get("email")
+    }
+
+
+# ======================
+# SIGNUP
+# ======================
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 async def signup(data: UserSignup):
@@ -48,7 +66,9 @@ async def signup(data: UserSignup):
     return {"message": "Account created successfully"}
 
 
-# ---------------- LOGIN ----------------
+# ======================
+# LOGIN (COOKIE)
+# ======================
 
 @router.post("/login")
 async def login(data: UserLogin, response: Response):
@@ -56,26 +76,43 @@ async def login(data: UserLogin, response: Response):
 
     user = await users_collection.find_one({"email": email})
     if not user or not verify_password(data.password, user["password"]):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid credentials")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials"
+        )
 
     token = create_access_token({
         "username": user["username"],
         "email": user["email"]
     })
 
-    response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,
-        secure=False,          # True in production
-        samesite="lax",
-        max_age=60 * 60 * 24
-    )
+    cookie_kwargs = {
+        "key": "access_token",
+        "value": token,
+        "httponly": True,
+        "max_age": 60 * 60 * 24
+    }
+
+    # 🔥 ENV-AWARE COOKIE SETTINGS
+    if ENV == "production":
+        cookie_kwargs.update({
+            "secure": True,     # HTTPS only (ngrok / prod)
+            "samesite": "none"
+        })
+    else:
+        cookie_kwargs.update({
+            "secure": False,    # Local HTTP
+            "samesite": "lax"
+        })
+
+    response.set_cookie(**cookie_kwargs)
 
     return {"message": "Login successful"}
 
 
-# ---------------- LOGOUT ----------------
+# ======================
+# LOGOUT
+# ======================
 
 @router.post("/logout")
 async def logout(response: Response):

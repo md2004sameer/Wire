@@ -91,6 +91,24 @@
 </div>
 
 <script>
+/* ======================
+   AUTH GUARD (COOKIE)
+   ====================== */
+async function authGuard() {
+  const res = await fetch("/auth/me", {
+    credentials: "include"
+  });
+
+  if (res.status === 401) {
+    location.replace("/login");
+  }
+}
+
+authGuard();
+
+/* ======================
+   STATE
+   ====================== */
 let skip = 0;
 const limit = 10;
 let loading = false;
@@ -104,6 +122,7 @@ async function getStatus(username) {
   const res = await fetch(`/friends/status/${username}`, {
     credentials: "include"
   });
+
   if (!res.ok) return "none";
   const data = await res.json();
   return data.status;
@@ -127,6 +146,11 @@ async function fetchUsers(reset = false) {
     { credentials: "include" }
   );
 
+  if (res.status === 401) {
+    location.replace("/login");
+    return;
+  }
+
   if (!res.ok) {
     loading = false;
     return;
@@ -149,7 +173,7 @@ async function fetchUsers(reset = false) {
 }
 
 /* ======================
-   RENDER USER ROW (SYNCED)
+   RENDER USER ROW
    ====================== */
 async function renderUser(user) {
   const li = document.createElement("li");
@@ -162,7 +186,7 @@ async function renderUser(user) {
   `;
 
   const btn = document.createElement("button");
-  btn.innerText = "Loading...";
+  btn.innerText = "Loading…";
   btn.disabled = true;
 
   li.appendChild(info);
@@ -176,20 +200,17 @@ async function renderUser(user) {
     btn.disabled = false;
     btn.onclick = () => follow(btn, user.username);
   }
-
   else if (status === "pending" || status === "incoming_request") {
     btn.innerText = "Requested";
     btn.classList.add("secondary");
     btn.disabled = true;
   }
-
   else if (status === "following") {
     btn.innerText = "Following ✓";
     btn.classList.add("secondary");
     btn.disabled = false;
     btn.onclick = () => unfollow(btn, user.username);
   }
-
   else if (status === "blocked") {
     btn.innerText = "Blocked";
     btn.disabled = true;
@@ -197,11 +218,11 @@ async function renderUser(user) {
 }
 
 /* ======================
-   FOLLOW USER
+   FOLLOW
    ====================== */
 async function follow(btn, username) {
   btn.disabled = true;
-  btn.innerText = "Sending...";
+  btn.innerText = "Sending…";
 
   const res = await fetch("/friends/follow", {
     method: "POST",
@@ -233,7 +254,7 @@ async function follow(btn, username) {
 }
 
 /* ======================
-   UNFOLLOW USER
+   UNFOLLOW
    ====================== */
 async function unfollow(btn, username) {
   btn.disabled = true;
@@ -263,16 +284,13 @@ function onSearch() {
    INFINITE SCROLL
    ====================== */
 window.addEventListener("scroll", () => {
-  if (
-    window.innerHeight + window.scrollY >=
-    document.body.offsetHeight - 200
-  ) {
+  if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
     fetchUsers();
   }
 });
 
 /* ======================
-   INITIAL LOAD
+   INIT
    ====================== */
 fetchUsers();
 </script>

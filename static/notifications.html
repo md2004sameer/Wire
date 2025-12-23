@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Notifications · Wire</title>
 
   <style>
@@ -9,6 +9,7 @@
       background:#020617;
       color:#e5e7eb;
       font-family:system-ui, sans-serif;
+      margin:0;
       padding:20px;
     }
 
@@ -19,40 +20,52 @@
 
     h2 {
       margin-bottom:16px;
+      font-size:20px;
+      font-weight:700;
     }
 
-    ul {
-      list-style:none;
-      padding:0;
-      margin:0;
+    .day-group {
+      margin-top:24px;
     }
 
-    li {
+    .day-title {
+      font-size:13px;
+      color:#94a3b8;
+      margin-bottom:8px;
+      font-weight:600;
+    }
+
+    .notif {
       display:flex;
       justify-content:space-between;
       align-items:center;
-      padding:12px 8px;
-      border-bottom:1px solid #334155;
+      padding:14px 10px;
+      border-bottom:1px solid #1e293b;
     }
 
-    .text {
+    .notif-text {
       display:flex;
       flex-direction:column;
+      gap:4px;
     }
 
     .meta {
       font-size:12px;
       color:#94a3b8;
-      margin-top:2px;
     }
 
-    button {
+    .time {
+      font-size:11px;
+      color:#64748b;
+    }
+
+    .actions button {
       padding:6px 12px;
-      border-radius:999px;
       border:none;
-      cursor:pointer;
+      border-radius:999px;
       font-size:13px;
       font-weight:600;
+      cursor:pointer;
     }
 
     .accept {
@@ -60,7 +73,7 @@
       color:white;
     }
 
-    .ignore {
+    .reject {
       background:#475569;
       color:white;
       margin-left:6px;
@@ -77,106 +90,160 @@
 <body>
 <div class="container">
   <h2>Notifications</h2>
-  <ul id="notifications"></ul>
+  <div id="list"></div>
 </div>
 
 <script>
-/* =========================
-   AUTH GUARD
-   ========================= */
-async function authGuard() {
-  const res = await fetch("/auth/me", {
-    credentials: "include"
-  });
-  if (res.status === 401) {
-    location.href = "/login";
-    return false;
-  }
-  return true;
-}
-
-/* =========================
+/* ======================
    LOAD NOTIFICATIONS
-   ========================= */
+   ====================== */
 async function loadNotifications() {
   const res = await fetch("/friends/notifications", {
     credentials: "include"
   });
 
-  if (!res.ok) return;
-
-  const notifications = await res.json();
-  const ul = document.getElementById("notifications");
-  ul.innerHTML = "";
-
-  if (notifications.length === 0) {
-    ul.innerHTML = `<div class="empty">No notifications</div>`;
+  if (res.status === 401) {
+    location.replace("/login");
     return;
   }
 
+  if (!res.ok) return;
+
+  const data = await res.json();
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+
+  if (data.length === 0) {
+    list.innerHTML = `<div class="empty">No notifications</div>`;
+    return;
+  }
+
+  const grouped = groupByDay(data);
+
+  Object.keys(grouped).forEach(day => {
+    const section = document.createElement("div");
+    section.className = "day-group";
+
+    section.innerHTML = `<div class="day-title">${day}</div>`;
+    grouped[day].forEach(n => {
+      section.appendChild(renderNotification(n));
+    });
+
+    list.appendChild(section);
+  });
+}
+
+/* ======================
+   GROUP BY DAY
+   ====================== */
+function groupByDay(notifications) {
+  const groups = {};
   notifications.forEach(n => {
-    if (n.type === "follow_request") {
-      renderFollowRequest(n);
-    }
+    const label = dayLabel(n.created_at);
+    if (!groups[label]) groups[label] = [];
+    groups[label].push(n);
   });
+  return groups;
 }
 
-/* =========================
-   RENDER FOLLOW REQUEST
-   ========================= */
-function renderFollowRequest(n) {
-  const li = document.createElement("li");
+/* ======================
+   RENDER NOTIFICATION
+   ====================== */
+function renderNotification(n) {
+  const div = document.createElement("div");
+  div.className = "notif";
 
-  li.innerHTML = `
-    <div class="text">
-      <strong>${n.from}</strong>
-      <span class="meta">
-        sent you a friend request · ${new Date(n.created_at).toLocaleString()}
-      </span>
-    </div>
-    <div>
-      <button class="accept" onclick="acceptRequest('${n.from}')">Accept</button>
-      <button class="ignore" onclick="ignoreRequest('${n.from}')">Ignore</button>
-    </div>
-  `;
+  const time = formatTime(n.created_at);
 
-  document.getElementById("notifications").appendChild(li);
+  if (n.type === "follow_request") {
+    div.innerHTML = `
+      <div class="notif-text">
+        <strong>${n.from}</strong>
+        <span class="meta">sent you a follow request</span>
+        <span class="time">${time}</span>
+      </div>
+
+      <div class="actions">
+        <button class="accept" onclick="accept('${n.from}')">Accept</button>
+        <button class="reject" onclick="reject('${n.from}')">Ignore</button>
+      </div>
+    `;
+  }
+
+  else if (n.type === "like") {
+    div.innerHTML = `
+      <div class="notif-text">
+        <strong>${n.from}</strong>
+        <span class="meta">liked your post</span>
+        <span class="time">${time}</span>
+      </div>
+    `;
+  }
+
+  return div;
 }
 
-/* =========================
-   ACCEPT REQUEST
-   ========================= */
-async function acceptRequest(username) {
+/* ======================
+   ACTIONS
+   ====================== */
+async function accept(username) {
   await fetch("/friends/accept", {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    method:"POST",
+    credentials:"include",
+    headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ username })
   });
-
   loadNotifications();
 }
 
-/* =========================
-   IGNORE REQUEST
-   ========================= */
-async function ignoreRequest(username) {
+async function reject(username) {
   await fetch("/friends/reject", {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    method:"POST",
+    credentials:"include",
+    headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ username })
   });
-
   loadNotifications();
 }
 
-/* =========================
+/* ======================
+   DATE HELPERS
+   ====================== */
+function dayLabel(ts) {
+  const d = new Date(ts);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  if (isSameDate(d, today)) return "Today";
+  if (isSameDate(d, yesterday)) return "Yesterday";
+
+  return d.toLocaleDateString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  });
+}
+
+function isSameDate(a, b) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function formatTime(ts) {
+  return new Date(ts).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+/* ======================
    INIT
-   ========================= */
-authGuard().then(ok => {
-  if (ok) loadNotifications();
-});
+   ====================== */
+loadNotifications();
 </script>
 </body>
 </html>

@@ -8,10 +8,13 @@ from pathlib import Path
 
 from main.auth import router as auth_router
 from main.feed import router as feed_router
-from main.ws import router as ws_router
+from main.ws_room import router as ws_router
 from main.profile import router as profile_router
 from main.database import init_indexes
 from main.friends import router as friends_router
+from main.ws import router as ws_router
+
+
 
 print("🔥 Wire App Loaded 🔥")
 
@@ -29,6 +32,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # ---------- API ROUTERS ----------
 app.include_router(friends_router)
+app.include_router(ws_router)
 app.include_router(auth_router)
 app.include_router(feed_router)
 app.include_router(ws_router)

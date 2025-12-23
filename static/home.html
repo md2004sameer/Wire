@@ -1,296 +1,217 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Wire · Home</title>
-  <link rel="stylesheet" href="/static/css/theme.css">
+<meta charset="UTF-8">
+<title>Wire · Home</title>
 
-  <style>/* ================= ROOT ================= */
+<style>
 :root {
-  --bg: #020617;
-  --panel: #020617;
-  --border: #1e293b;
-  --border-soft: #334155;
-  --text: #e5e7eb;
-  --muted: #94a3b8;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
+  --bg:#020617;
+  --border:#1e293b;
+  --muted:#94a3b8;
+  --text:#e5e7eb;
+  --accent:#2563eb;
 }
 
-/* ================= BODY ================= */
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  margin: 0;
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:system-ui,sans-serif;
 }
 
-/* ================= CONTAINER ================= */
 .container {
-  max-width: 620px;
-  margin: 0 auto;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  max-width:620px;
+  margin:auto;
 }
 
-/* ================= TOP BAR ================= */
+/* ---------- TOP BAR ---------- */
 .topbar {
-  position: sticky;
-  top: 0;
-  backdrop-filter: blur(8px);
-  background: rgba(2,6,23,0.85);
-  border-bottom: 1px solid var(--border);
-  padding: 12px 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  z-index: 10;
+  position:sticky;
+  top:0;
+  padding:12px 16px;
+  background:#020617ee;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  z-index:10;
 }
 
-.topbar h3 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: .3px;
+.avatar {
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  background:linear-gradient(135deg,#2563eb,#3b82f6);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:800;
 }
 
-/* ================= AVATAR ================= */
-.profile-avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #2563eb, #3b82f6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: transform .15s ease, box-shadow .15s ease;
-}
-
-.profile-avatar:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 0 3px rgba(37,99,235,.25);
-}
-
-.profile-avatar span {
-  color: white;
-  font-weight: 800;
-  font-size: 16px;
-}
-
-/* ================= COMPOSER ================= */
+/* ---------- COMPOSER ---------- */
 .composer {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  padding:14px;
+  border-bottom:1px solid var(--border);
 }
 
 .composer textarea {
-  width: 100%;
-  min-height: 90px;
-  resize: none;
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--border-soft);
-  border-radius: 14px;
-  padding: 12px 14px;
-  outline: none;
-  font-size: 15px;
-  line-height: 1.4;
-  transition: border .15s ease, box-shadow .15s ease;
-}
-
-.composer textarea::placeholder {
-  color: var(--muted);
-}
-
-.composer textarea:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+  width:100%;
+  min-height:90px;
+  background:transparent;
+  border:1px solid var(--border);
+  border-radius:12px;
+  color:var(--text);
+  padding:12px;
+  font-size:15px;
 }
 
 .composer button {
-  align-self: flex-end;
-  padding: 8px 18px;
-  background: var(--accent);
-  border: none;
-  border-radius: 999px;
-  color: white;
-  font-weight: 700;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background .15s ease, transform .1s ease;
+  margin-top:8px;
+  width:100%;
+  background:var(--accent);
+  border:none;
+  padding:10px;
+  border-radius:999px;
+  font-weight:700;
+  color:white;
+  cursor:pointer;
 }
 
-.composer button:hover {
-  background: var(--accent-hover);
-}
-
-.composer button:active {
-  transform: scale(.97);
-}
-
-.new-posts {
-  position: sticky;
-  top: 64px; /* below topbar */
-  background: #1d4ed8;
-  color: white;
-  text-align: center;
-  padding: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  z-index: 9;
-}
-
-.new-posts:hover {
-  background: #2563eb;
-}
-
-.hidden {
-  display: none;
-}
-
-/* ================= FEED ================= */
-#feed {
-  display: flex;
-  flex-direction: column;
-}
-
-/* ================= POST ================= */
+/* ---------- FEED ---------- */
 .post {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
-  transition: background .15s ease;
+  padding:14px;
+  border-bottom:1px solid var(--border);
 }
 
-.post:hover {
-  background: rgba(148,163,184,.05);
+.post-header {
+  display:flex;
+  justify-content:space-between;
+  font-size:14px;
+  font-weight:700;
 }
 
-.author {
-  font-weight: 700;
-  font-size: 14px;
-  margin-bottom: 6px;
-  color: #f8fafc;
+.time {
+  font-size:12px;
+  color:var(--muted);
 }
 
 .post-content {
-  font-size: 15px;
-  line-height: 1.55;
-  color: #cbd5f5;
-  white-space: pre-wrap;
+  margin:8px 0;
+  line-height:1.5;
 }
 
-
-.users-btn {
-  background: transparent;
-  border: 1px solid var(--border-soft);
-  color: var(--text);
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background .15s ease, border .15s ease;
+.post-actions {
+  display:flex;
+  justify-content:space-around;
 }
 
-.users-btn:hover {
-  background: rgba(37,99,235,.15);
-  border-color: var(--accent);
+.post-actions button {
+  background:none;
+  border:none;
+  color:var(--muted);
+  font-size:16px;
+  padding:8px;
+  cursor:pointer;
 }
 
-/* ================= EMPTY STATE ================= */
-.empty {
-  padding: 40px;
-  text-align: center;
-  color: var(--muted);
+.post-actions button.liked {
+  color:#ef4444;
 }
-  </style>
+
+/* ---------- COMMENT MODAL ---------- */
+#comment-modal {
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.6);
+  display:flex;
+  align-items:flex-end;
+}
+
+#comment-modal.hidden {
+  display:none;
+}
+
+.modal {
+  background:#020617;
+  width:100%;
+  max-height:80vh;
+  border-radius:16px 16px 0 0;
+  padding:16px;
+  display:flex;
+  flex-direction:column;
+}
+
+#comments-list {
+  flex:1;
+  overflow:auto;
+  margin-bottom:8px;
+}
+
+.comment {
+  margin-bottom:10px;
+}
+
+.comment small {
+  color:var(--muted);
+  font-size:12px;
+}
+
+.modal textarea {
+  width:100%;
+  background:transparent;
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:10px;
+  color:var(--text);
+}
+
+.modal button {
+  margin-top:8px;
+}
+</style>
 </head>
 
 <body>
-
 <div class="container">
 
-  <!-- TOP BAR -->
- <div class="topbar">
-  <h3>Wire</h3>
-
-  <div style="display:flex; align-items:center; gap:14px;">
-
-    <!-- Users -->
-    <button class="users-btn" onclick="goToUsers()">Users</button>
-
-    <!-- Notifications -->
-    <div class="notif-icon" onclick="goToNotifications()">
-      ❤️
-      <span id="notif-dot" class="notif-dot hidden"></span>
-    </div>
-
-    <!-- Profile -->
-    <div class="profile-avatar" onclick="goToProfile()">
-      <span id="avatar-letter">U</span>
-    </div>
-
+  <div class="topbar">
+    <h3>Wire</h3>
+    <div class="avatar" id="avatar-letter">U</div>
   </div>
-</div>
 
-  <!-- COMPOSER -->
   <div class="composer">
     <textarea id="content" placeholder="What's happening?"></textarea>
     <button onclick="createPost()">Post</button>
   </div>
 
-    <div id="new-posts-banner" class="new-posts hidden" onclick="loadNewPosts()">
-  New posts available
-</div>
+  <div
+    id="new-posts-banner"
+    class="hidden"
+    style="padding:8px;text-align:center;background:#1d4ed8;cursor:pointer"
+    onclick="loadNewPosts()"
+  >
+    New posts available
+  </div>
 
-  <!-- FEED -->
   <div id="feed"></div>
-
 </div>
 
-<script>
-/* ---------- AUTH GUARD ---------- */
-async function loadAvatar() {
-  try {
-    const res = await fetch("/auth/me", {
-      credentials: "include"
-    });
+<!-- COMMENT MODAL -->
+<div id="comment-modal" class="hidden">
+  <div class="modal">
+    <h3>Comments</h3>
+    <div id="comments-list"></div>
+    <textarea id="comment-text" placeholder="Write a comment..."></textarea>
+    <button onclick="submitComment()">Post</button>
+    <button onclick="closeComments()">Close</button>
+  </div>
+</div>
 
-    if (res.status === 401) {
-      location.replace("/login");
-      return;
-    }
+<!-- ONLY ONE JS FILE -->
+<script src="/static/js/auth.js" defer></script>
+<script src="/static/js/feed.js" defer></script>
+<script src="/static/js/comments.js" defer></script>
 
-    const user = await res.json();
-    const letter = user.username?.[0]?.toUpperCase() || "U";
-    document.getElementById("avatar-letter").innerText = letter;
-
-  } catch {
-    location.replace("/login");
-  }
-}
-
-function goToUsers() {
-  location.href = "/users";
-}
-
-function goToNotifications() {
-  location.href = "/notifications";
-}
-
-function goToProfile() {
-  location.href = "/profile";
-}
-
-
-loadAvatar();
-</script>
-
-<script src="/static/js/feed.js"></script>
 </body>
 </html>

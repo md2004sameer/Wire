@@ -1,10 +1,123 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Wire · Connect Simply</title>
+
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(1000px at top right, #1e293b, #020617);
+      color: #e5e7eb;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      max-width: 420px;
+      width: 100%;
+      padding: 36px 28px;
+      background: rgba(2,6,23,0.9);
+      border: 1px solid #1e293b;
+      border-radius: 16px;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+    }
+
+    p {
+      margin-top: 12px;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #cbd5f5;
+    }
+
+    .actions {
+      margin-top: 28px;
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    button {
+      padding: 12px 22px;
+      border-radius: 999px;
+      border: none;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .12s ease, background .15s ease;
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+
+    .primary {
+      background: #2563eb;
+      color: white;
+    }
+
+    .primary:hover {
+      background: #1d4ed8;
+    }
+
+    .secondary {
+      background: transparent;
+      color: #e5e7eb;
+      border: 1px solid #334155;
+    }
+
+    .secondary:hover {
+      background: rgba(148,163,184,0.08);
+    }
+
+    .footer {
+      margin-top: 24px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
 </head>
+
 <body>
+
+  <div class="card">
+    <h1>Wire</h1>
+
+    <p>
+      A simple, private place to connect with people.<br>
+      No noise. No clutter. Just conversations.
+    </p>
+
+    <div class="actions">
+      <button class="primary" onclick="goLogin()">Login</button>
+      <button class="secondary" onclick="goSignup()">Sign up</button>
+    </div>
+
+    <div class="footer">
+      Built with FastAPI · Real-time · Secure
+    </div>
+  </div>
+
+<script>
+function goLogin() {
+  location.href = "/login";
+}
+
+function goSignup() {
+  location.href = "/signup";
+}
+</script>
 
 </body>
 </html>
