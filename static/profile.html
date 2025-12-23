@@ -1,241 +1,82 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Profile · Wire</title>
 
-  <style>
-    body {
-      background:#020617;
-      color:#e5e7eb;
-      font-family:system-ui, sans-serif;
-      margin:0;
-      padding:24px;
-    }
-
-    .container {
-      max-width:640px;
-      margin:0 auto;
-    }
-
-    .header {
-      display:flex;
-      gap:20px;
-      align-items:center;
-      margin-bottom:24px;
-    }
-
-    .avatar {
-      width:96px;
-      height:96px;
-      border-radius:50%;
-      background:#2563eb;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:40px;
-      font-weight:700;
-    }
-
-    .username {
-      font-size:20px;
-      font-weight:700;
-    }
-
-    .bio {
-      margin-top:6px;
-      color:#cbd5e1;
-      font-size:14px;
-    }
-
-    .stats {
-      display:flex;
-      gap:24px;
-      margin-top:14px;
-    }
-
-    .stat { cursor:pointer; }
-
-    .section {
-      border-top:1px solid #1e293b;
-      padding-top:20px;
-      margin-top:24px;
-    }
-
-    label {
-      font-size:12px;
-      color:#94a3b8;
-      display:block;
-      margin-top:12px;
-    }
-
-    input, textarea {
-      width:100%;
-      margin-top:6px;
-      padding:10px;
-      background:#020617;
-      color:#e5e7eb;
-      border:1px solid #334155;
-      border-radius:8px;
-    }
-
-    textarea { resize:none; min-height:80px; }
-
-    .actions {
-      display:flex;
-      justify-content:space-between;
-      margin-top:28px;
-    }
-
-    button {
-      padding:10px 18px;
-      border-radius:8px;
-      border:none;
-      font-weight:600;
-      cursor:pointer;
-    }
-
-    .primary { background:#2563eb; color:white; }
-    .secondary { background:#334155; color:white; }
-
-    .hidden { display:none; }
-  </style>
+  <link rel="stylesheet" href="/static/css/theme.css" />
 </head>
 
 <body>
-<div class="container">
+  <div class="container">
 
-  <!-- HEADER -->
-  <div class="header">
-    <div class="avatar" id="avatar">U</div>
-    <div>
-      <div class="username" id="username"></div>
-      <div class="bio" id="bioText"></div>
+    <!-- HEADER -->
+    <div class="header">
+      <div class="avatar" id="avatar">U</div>
 
-      <div class="stats">
-        <div class="stat" onclick="goToFriends('followers')">
-          <strong id="followersCount">0</strong> Followers
-        </div>
-        <div class="stat" onclick="goToFriends('following')">
-          <strong id="followingCount">0</strong> Following
+      <div class="user-meta">
+        <div class="username" id="username"></div>
+        <div class="bio" id="bioText">No bio yet</div>
+
+        <div class="stats">
+          <div class="stat" data-followers>
+            <strong id="followersCount">0</strong>
+            <span>Followers</span>
+          </div>
+
+          <div class="stat" data-following>
+            <strong id="followingCount">0</strong>
+            <span>Following</span>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- EDITABLE SECTION -->
-  <div class="section">
-    <label>Bio</label>
-    <textarea id="bioInput" readonly></textarea>
+    <!-- PROFILE DETAILS -->
+    <div class="section">
+      <label for="bioInput">Bio</label>
+      <textarea
+        id="bioInput"
+        placeholder="Tell something about yourself"
+        readonly
+      ></textarea>
 
-    <label>Website</label>
-    <input id="website" readonly>
+      <label for="website">Website</label>
+      <input
+        id="website"
+        type="url"
+        placeholder="https://example.com"
+        readonly
+      />
 
-    <label>Location</label>
-    <input id="location" readonly>
+      <label for="location">Location</label>
+      <input
+        id="location"
+        type="text"
+        placeholder="City, Country"
+        readonly
+      />
 
-    <label>
-      <input type="checkbox" id="is_private" disabled> Private profile
-    </label>
-  </div>
-
-  <!-- ACTIONS -->
-  <div class="actions">
-    <button class="secondary" onclick="logout()">Logout</button>
-
-    <div>
-      <button id="editBtn" class="primary" onclick="enableEdit()">Edit</button>
-      <button id="saveBtn" class="primary hidden" onclick="saveProfile()">Save</button>
+      <label class="checkbox">
+        <input type="checkbox" id="is_private" disabled />
+        <span>Private profile</span>
+      </label>
     </div>
+
+    <!-- ACTIONS -->
+    <div class="actions">
+      <button class="secondary" id="logoutBtn">Logout</button>
+
+      <div class="right-actions">
+        <button class="primary" id="editBtn">Edit</button>
+        <button class="primary hidden" id="saveBtn">Save</button>
+      </div>
+    </div>
+
   </div>
 
-</div>
-
-<script>
-/* ---------- AUTH GUARD ---------- */
-(async function () {
-  const res = await fetch("/auth/me", { credentials: "include" });
-  if (res.status === 401) location.replace("/login");
-})();
-
-/* ---------- REDIRECT ---------- */
-function goToFriends(type) {
-  location.href = `/friends-list?type=${type}`;
-}
-
-/* ---------- LOAD PROFILE ---------- */
-async function loadProfile() {
-  const res = await fetch("/profile/me", { credentials: "include" });
-  if (!res.ok) return;
-
-  const p = await res.json();
-
-  username.innerText = p.username;
-  bioText.innerText = p.bio || "No bio yet";
-
-  bioInput.value = p.bio || "";
-  website.value = p.website || "";
-  location.value = p.location || "";
-  is_private.checked = p.is_private;
-
-  avatar.innerText = p.username[0].toUpperCase();
-}
-
-/* ---------- LOAD COUNTS ---------- */
-async function loadCounts() {
-  const followers = await fetch("/friends/followers", { credentials:"include" }).then(r=>r.json());
-  const following = await fetch("/friends/following", { credentials:"include" }).then(r=>r.json());
-
-  followersCount.innerText = followers.count;
-  followingCount.innerText = following.count;
-}
-
-/* ---------- EDIT MODE ---------- */
-function enableEdit() {
-  document.querySelectorAll("input, textarea").forEach(el => {
-    if (el.type === "checkbox") el.disabled = false;
-    else el.readOnly = false;
-  });
-
-  editBtn.classList.add("hidden");
-  saveBtn.classList.remove("hidden");
-}
-
-/* ---------- SAVE PROFILE ---------- */
-async function saveProfile() {
-  const payload = {
-    bio: bioInput.value,
-    website: website.value,
-    location: location.value,
-    is_private: is_private.checked
-  };
-
-  await fetch("/profile/me", {
-    method: "PUT",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-
-  editBtn.classList.remove("hidden");
-  saveBtn.classList.add("hidden");
-
-  document.querySelectorAll("input, textarea").forEach(el => {
-    if (el.type === "checkbox") el.disabled = true;
-    else el.readOnly = true;
-  });
-
-  loadProfile();
-}
-
-/* ---------- LOGOUT ---------- */
-async function logout() {
-  await fetch("/auth/logout", { method:"POST", credentials:"include" });
-  location.replace("/login");
-}
-
-loadProfile();
-loadCounts();
-</script>
+  <!-- JS -->
+  <script src="/static/js/auth.js" defer></script>
+  <script src="/static/js/profile.js" defer></script>
 </body>
 </html>

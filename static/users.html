@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <title>Explore Users · Wire</title>
@@ -74,63 +74,46 @@
       background:#334155;
       cursor:not-allowed;
     }
+
+    .empty {
+      text-align:center;
+      color:#94a3b8;
+      padding:40px;
+    }
   </style>
 </head>
 
 <body>
 <div class="container">
   <h2>Explore Users</h2>
-
-  <input
-    id="search"
-    placeholder="Search users..."
-    oninput="onSearch()"
-  />
-
+  <input id="search" placeholder="Search users…" />
   <ul id="users"></ul>
 </div>
 
 <script>
-/* ======================
-   AUTH GUARD (COOKIE)
-   ====================== */
-async function authGuard() {
-  const res = await fetch("/auth/me", {
-    credentials: "include"
-  });
+/* =========================
+   AUTH GUARD
+   ========================= */
+(async function authGuard() {
+  const res = await fetch("/auth/me", { credentials: "include" });
+  if (res.status === 401) location.replace("/login");
+})();
 
-  if (res.status === 401) {
-    location.replace("/login");
-  }
-}
-
-authGuard();
-
-/* ======================
+/* =========================
    STATE
-   ====================== */
+   ========================= */
 let skip = 0;
 const limit = 10;
 let loading = false;
 let finished = false;
 let query = "";
 
-/* ======================
-   FETCH RELATION STATUS
-   ====================== */
-async function getStatus(username) {
-  const res = await fetch(`/friends/status/${username}`, {
-    credentials: "include"
-  });
+const usersEl = document.getElementById("users");
+const searchEl = document.getElementById("search");
 
-  if (!res.ok) return "none";
-  const data = await res.json();
-  return data.status;
-}
-
-/* ======================
+/* =========================
    FETCH USERS
-   ====================== */
+   ========================= */
 async function fetchUsers(reset = false) {
   if (loading || finished) return;
   loading = true;
@@ -138,7 +121,7 @@ async function fetchUsers(reset = false) {
   if (reset) {
     skip = 0;
     finished = false;
-    document.getElementById("users").innerHTML = "";
+    usersEl.innerHTML = "";
   }
 
   const res = await fetch(
@@ -146,83 +129,92 @@ async function fetchUsers(reset = false) {
     { credentials: "include" }
   );
 
-  if (res.status === 401) {
-    location.replace("/login");
-    return;
-  }
-
   if (!res.ok) {
     loading = false;
     return;
   }
 
   const users = await res.json();
-
   if (users.length === 0) {
     finished = true;
     loading = false;
     return;
   }
 
-  for (const user of users) {
-    await renderUser(user);
-  }
+  const usernames = users.map(u => u.username);
+
+  // 🔥 batch status fetch (FIX)
+  const statusRes = await fetch("/friends/status/batch", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(usernames)
+  });
+
+  const statusMap = statusRes.ok ? await statusRes.json() : {};
+
+  users.forEach(u => renderUser(u, statusMap[u.username] || "none"));
 
   skip += limit;
   loading = false;
 }
 
-/* ======================
-   RENDER USER ROW
-   ====================== */
-async function renderUser(user) {
+/* =========================
+   RENDER USER
+   ========================= */
+function renderUser(user, status) {
   const li = document.createElement("li");
 
   const info = document.createElement("div");
   info.className = "user-info";
   info.innerHTML = `
     <strong>${user.username}</strong>
-    ${user.is_private ? `<span class="private">Private</span>` : ``}
+    ${user.is_private ? `<span class="private">Private</span>` : ""}
   `;
 
   const btn = document.createElement("button");
-  btn.innerText = "Loading…";
-  btn.disabled = true;
+
+  applyButtonState(btn, user.username, status);
 
   li.appendChild(info);
   li.appendChild(btn);
-  document.getElementById("users").appendChild(li);
+  usersEl.appendChild(li);
+}
 
-  const status = await getStatus(user.username);
+/* =========================
+   BUTTON STATE
+   ========================= */
+function applyButtonState(btn, username, status) {
+  btn.className = "";
+  btn.disabled = false;
+  btn.onclick = null;
 
   if (status === "none") {
-    btn.innerText = "Follow";
-    btn.disabled = false;
-    btn.onclick = () => follow(btn, user.username);
+    btn.textContent = "Follow";
+    btn.onclick = () => follow(btn, username);
   }
   else if (status === "pending" || status === "incoming_request") {
-    btn.innerText = "Requested";
+    btn.textContent = "Requested";
     btn.classList.add("secondary");
     btn.disabled = true;
   }
   else if (status === "following") {
-    btn.innerText = "Following ✓";
+    btn.textContent = "Following ✓";
     btn.classList.add("secondary");
-    btn.disabled = false;
-    btn.onclick = () => unfollow(btn, user.username);
+    btn.onclick = () => unfollow(btn, username);
   }
-  else if (status === "blocked") {
-    btn.innerText = "Blocked";
+  else {
+    btn.textContent = status;
     btn.disabled = true;
   }
 }
 
-/* ======================
+/* =========================
    FOLLOW
-   ====================== */
+   ========================= */
 async function follow(btn, username) {
   btn.disabled = true;
-  btn.innerText = "Sending…";
+  btn.textContent = "Sending…";
 
   const res = await fetch("/friends/follow", {
     method: "POST",
@@ -232,30 +224,17 @@ async function follow(btn, username) {
   });
 
   if (!res.ok) {
-    btn.innerText = "Follow";
-    btn.disabled = false;
+    applyButtonState(btn, username, "none");
     return;
   }
 
   const data = await res.json();
-
-  if (data.status === "pending") {
-    btn.innerText = "Requested";
-    btn.classList.add("secondary");
-    btn.disabled = true;
-  }
-
-  if (data.status === "accepted") {
-    btn.innerText = "Following ✓";
-    btn.classList.add("secondary");
-    btn.disabled = false;
-    btn.onclick = () => unfollow(btn, username);
-  }
+  applyButtonState(btn, username, data.status);
 }
 
-/* ======================
+/* =========================
    UNFOLLOW
-   ====================== */
+   ========================= */
 async function unfollow(btn, username) {
   btn.disabled = true;
 
@@ -266,32 +245,32 @@ async function unfollow(btn, username) {
     body: JSON.stringify({ username })
   });
 
-  btn.innerText = "Follow";
-  btn.classList.remove("secondary");
-  btn.disabled = false;
-  btn.onclick = () => follow(btn, username);
+  applyButtonState(btn, username, "none");
 }
 
-/* ======================
+/* =========================
    SEARCH
-   ====================== */
-function onSearch() {
-  query = document.getElementById("search").value.trim();
+   ========================= */
+searchEl.addEventListener("input", () => {
+  query = searchEl.value.trim();
   fetchUsers(true);
-}
+});
 
-/* ======================
+/* =========================
    INFINITE SCROLL
-   ====================== */
+   ========================= */
 window.addEventListener("scroll", () => {
-  if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
+  if (
+    window.innerHeight + window.scrollY >=
+    document.body.offsetHeight - 200
+  ) {
     fetchUsers();
   }
 });
 
-/* ======================
+/* =========================
    INIT
-   ====================== */
+   ========================= */
 fetchUsers();
 </script>
 </body>

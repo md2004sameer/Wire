@@ -18,7 +18,13 @@ let wsConnected = false;
 let pollTimer = null;
 
 // =========================
-// WEBSOCKET
+// DOM REFERENCES
+// =========================
+let feedEl;
+let bannerEl;
+
+// =========================
+// WEBSOCKET (REALTIME)
 // =========================
 function startWebSocket() {
   if (wsConnected) return;
@@ -44,18 +50,11 @@ function startWebSocket() {
 
     const p = msg.post;
     if (!p || !p.id) return;
-
     if (renderedPostIds.has(p.id)) return;
 
     renderPost(p, true);
     renderedPostIds.add(p.id);
-
-    if (
-      !newestTimestamp ||
-      new Date(p.created_at) > new Date(newestTimestamp)
-    ) {
-      newestTimestamp = p.created_at;
-    }
+    newestTimestamp = p.created_at;
   };
 
   ws.onclose = () => {
@@ -66,9 +65,7 @@ function startWebSocket() {
     retryWebSocket();
   };
 
-  ws.onerror = () => {
-    ws?.close();
-  };
+  ws.onerror = () => ws.close();
 }
 
 function retryWebSocket() {
@@ -99,7 +96,7 @@ async function loadPosts() {
   loading = true;
 
   const res = await fetch(`/posts?skip=${skip}&limit=${limit}`, {
-    credentials: "include",
+    credentials: "include"
   });
 
   if (res.status === 401) {
@@ -125,10 +122,7 @@ async function loadPosts() {
     renderPost(p, false);
     renderedPostIds.add(p.id);
 
-    if (
-      !newestTimestamp ||
-      new Date(p.created_at) > new Date(newestTimestamp)
-    ) {
+    if (!newestTimestamp || p.created_at > newestTimestamp) {
       newestTimestamp = p.created_at;
     }
   }
@@ -158,31 +152,21 @@ async function pollNewPosts() {
   if (!fresh.length) return;
 
   pendingNewPosts = fresh;
-  document
-    .getElementById("new-posts-banner")
-    ?.classList.remove("hidden");
+  bannerEl?.classList.remove("hidden");
 }
 
 function loadNewPosts() {
-  let latest = newestTimestamp;
-
   pendingNewPosts
     .slice()
     .reverse()
     .forEach(p => {
       renderPost(p, true);
       renderedPostIds.add(p.id);
-
-      if (!latest || new Date(p.created_at) > new Date(latest)) {
-        latest = p.created_at;
-      }
+      newestTimestamp = p.created_at;
     });
 
-  newestTimestamp = latest;
   pendingNewPosts = [];
-  document
-    .getElementById("new-posts-banner")
-    ?.classList.add("hidden");
+  bannerEl?.classList.add("hidden");
 }
 
 // =========================
@@ -202,11 +186,11 @@ function renderPost(p, prepend) {
     <div class="post-content">${escapeHTML(p.content)}</div>
 
     <div class="post-actions">
-      <button onclick="toggleLike('${p.id}', this)">
+      <button class="like-btn">
         ❤️ <span>${p.like_count}</span>
       </button>
 
-      <button onclick="openComments('${p.id}')">
+      <button class="comment-btn">
         💬 <span>${p.comment_count}</span>
       </button>
 
@@ -214,8 +198,17 @@ function renderPost(p, prepend) {
     </div>
   `;
 
-  const feed = document.getElementById("feed");
-  prepend ? feed.prepend(div) : feed.appendChild(div);
+  // like
+  div.querySelector(".like-btn").addEventListener("click", (e) => {
+    toggleLike(p.id, e.currentTarget);
+  });
+
+  // comments
+  div.querySelector(".comment-btn").addEventListener("click", () => {
+    window.openComments?.(p.id);
+  });
+
+  prepend ? feedEl.prepend(div) : feedEl.appendChild(div);
 }
 
 // =========================
@@ -230,19 +223,21 @@ async function createPost() {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ content })
   });
 
   if (!res.ok) return;
 
-  let post = null;
+  let post;
   try {
     post = await res.json();
-  } catch {}
+  } catch {
+    textarea.value = "";
+    return;
+  }
 
   textarea.value = "";
 
-  // If backend returns post → prepend
   if (post && post.id && !renderedPostIds.has(post.id)) {
     renderPost(post, true);
     renderedPostIds.add(post.id);
@@ -251,12 +246,12 @@ async function createPost() {
 }
 
 // =========================
-// LIKE
+// LIKE / UNLIKE
 // =========================
 async function toggleLike(postId, btn) {
   const res = await fetch(`/posts/${postId}/like`, {
     method: "POST",
-    credentials: "include",
+    credentials: "include"
   });
 
   if (!res.ok) return;
@@ -288,13 +283,17 @@ window.addEventListener("scroll", () => {
   }
 });
 
-// expose for HTML
-window.createPost = createPost;
-window.loadNewPosts = loadNewPosts;
+// =========================
+// BOOT
+// =========================
+document.addEventListener("DOMContentLoaded", () => {
+  feedEl = document.getElementById("feed");
+  bannerEl = document.getElementById("new-posts-banner");
 
-// =========================
-// BOOT (ORDER MATTERS)
-// =========================
-loadPosts();        // REST = source of truth
-startPolling();     // fallback
-startWebSocket();   // realtime
+  window.createPost = createPost;
+  window.loadNewPosts = loadNewPosts;
+
+  loadPosts();      // REST = source of truth
+  startPolling();   // safety
+  startWebSocket(); // realtime
+});

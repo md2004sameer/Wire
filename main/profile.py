@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
 from main.deps import get_current_user
@@ -9,20 +9,21 @@ from main.database import profiles_collection
 router = APIRouter(prefix="/profile", tags=["Profile"])
 
 
-# -------------------- SCHEMA --------------------
+# ======================
+# SCHEMAS
+# ======================
 
 class ProfileUpdate(BaseModel):
-    full_name: Optional[str] = None
     bio: Optional[str] = None
-    gender: Optional[str] = None
-    date_of_birth: Optional[str] = None
     website: Optional[str] = None
     location: Optional[str] = None
     avatar_url: Optional[str] = None
     is_private: Optional[bool] = None
 
 
-# -------------------- UTILITY --------------------
+# ======================
+# HELPERS
+# ======================
 
 def get_username(user: dict) -> str:
     username = user.get("username")
@@ -34,7 +35,23 @@ def get_username(user: dict) -> str:
     return username
 
 
-# -------------------- GET MY PROFILE --------------------
+def default_profile(username: str) -> dict:
+    """Returned when profile does not yet exist"""
+    return {
+        "username": username,
+        "bio": "",
+        "website": "",
+        "location": "",
+        "avatar_url": None,
+        "is_private": False,
+        "created_at": None,
+        "updated_at": None,
+    }
+
+
+# ======================
+# GET MY PROFILE
+# ======================
 
 @router.get("/me")
 async def get_my_profile(user=Depends(get_current_user)):
@@ -45,16 +62,16 @@ async def get_my_profile(user=Depends(get_current_user)):
         {"_id": 0}
     )
 
+    # 🔥 IMPORTANT: do NOT return 404
     if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Profile not found"
-        )
+        return default_profile(username)
 
     return profile
 
 
-# -------------------- CREATE / UPDATE PROFILE (UPSERT) --------------------
+# ======================
+# CREATE / UPDATE PROFILE (UPSERT)
+# ======================
 
 @router.put("/me")
 async def update_profile(

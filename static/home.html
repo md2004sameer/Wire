@@ -1,214 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Wire · Home</title>
+  <meta charset="UTF-8" />
+  <title>Wire · Home</title>
+  <link rel="stylesheet" href="/static/css/home.css">
 
-<style>
-:root {
-  --bg:#020617;
-  --border:#1e293b;
-  --muted:#94a3b8;
-  --text:#e5e7eb;
-  --accent:#2563eb;
-}
+  <style>
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
-body {
-  margin:0;
-  background:var(--bg);
-  color:var(--text);
-  font-family:system-ui,sans-serif;
-}
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
 
-.container {
-  max-width:620px;
-  margin:auto;
-}
+    .icon-btn {
+      cursor: pointer;
+      color: #e5e7eb;
+      display: flex;
+      align-items: center;
+    }
 
-/* ---------- TOP BAR ---------- */
-.topbar {
-  position:sticky;
-  top:0;
-  padding:12px 16px;
-  background:#020617ee;
-  border-bottom:1px solid var(--border);
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  z-index:10;
-}
-
-.avatar {
-  width:38px;
-  height:38px;
-  border-radius:50%;
-  background:linear-gradient(135deg,#2563eb,#3b82f6);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:800;
-}
-
-/* ---------- COMPOSER ---------- */
-.composer {
-  padding:14px;
-  border-bottom:1px solid var(--border);
-}
-
-.composer textarea {
-  width:100%;
-  min-height:90px;
-  background:transparent;
-  border:1px solid var(--border);
-  border-radius:12px;
-  color:var(--text);
-  padding:12px;
-  font-size:15px;
-}
-
-.composer button {
-  margin-top:8px;
-  width:100%;
-  background:var(--accent);
-  border:none;
-  padding:10px;
-  border-radius:999px;
-  font-weight:700;
-  color:white;
-  cursor:pointer;
-}
-
-/* ---------- FEED ---------- */
-.post {
-  padding:14px;
-  border-bottom:1px solid var(--border);
-}
-
-.post-header {
-  display:flex;
-  justify-content:space-between;
-  font-size:14px;
-  font-weight:700;
-}
-
-.time {
-  font-size:12px;
-  color:var(--muted);
-}
-
-.post-content {
-  margin:8px 0;
-  line-height:1.5;
-}
-
-.post-actions {
-  display:flex;
-  justify-content:space-around;
-}
-
-.post-actions button {
-  background:none;
-  border:none;
-  color:var(--muted);
-  font-size:16px;
-  padding:8px;
-  cursor:pointer;
-}
-
-.post-actions button.liked {
-  color:#ef4444;
-}
-
-/* ---------- COMMENT MODAL ---------- */
-#comment-modal {
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.6);
-  display:flex;
-  align-items:flex-end;
-}
-
-#comment-modal.hidden {
-  display:none;
-}
-
-.modal {
-  background:#020617;
-  width:100%;
-  max-height:80vh;
-  border-radius:16px 16px 0 0;
-  padding:16px;
-  display:flex;
-  flex-direction:column;
-}
-
-#comments-list {
-  flex:1;
-  overflow:auto;
-  margin-bottom:8px;
-}
-
-.comment {
-  margin-bottom:10px;
-}
-
-.comment small {
-  color:var(--muted);
-  font-size:12px;
-}
-
-.modal textarea {
-  width:100%;
-  background:transparent;
-  border:1px solid var(--border);
-  border-radius:12px;
-  padding:10px;
-  color:var(--text);
-}
-
-.modal button {
-  margin-top:8px;
-}
-</style>
+    .icon-btn:hover {
+      color: #38bdf8;
+    }
+  </style>
 </head>
 
 <body>
 <div class="container">
 
+  <!-- TOP BAR -->
   <div class="topbar">
     <h3>Wire</h3>
-    <div class="avatar" id="avatar-letter">U</div>
+
+    <div class="topbar-actions">
+      <!-- Users -->
+      <div class="icon-btn" id="friends-btn" title="Explore users">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
+                stroke="currentColor" stroke-width="2"/>
+          <circle cx="9" cy="7" r="4"
+                  stroke="currentColor" stroke-width="2"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"
+                stroke="currentColor" stroke-width="2"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"
+                stroke="currentColor" stroke-width="2"/>
+        </svg>
+      </div>
+
+      <!-- Notifications -->
+      <div class="icon-btn" id="notif-btn" title="Notifications">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"
+                stroke="currentColor" stroke-width="2"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"
+                stroke="currentColor" stroke-width="2"/>
+        </svg>
+      </div>
+
+      <!-- Profile -->
+      <div class="avatar" id="avatar-letter" title="Profile">U</div>
+    </div>
   </div>
 
+  <!-- COMPOSER -->
   <div class="composer">
     <textarea id="content" placeholder="What's happening?"></textarea>
-    <button onclick="createPost()">Post</button>
+    <button id="post-btn">Post</button>
   </div>
 
-  <div
-    id="new-posts-banner"
-    class="hidden"
-    style="padding:8px;text-align:center;background:#1d4ed8;cursor:pointer"
-    onclick="loadNewPosts()"
-  >
-    New posts available
-  </div>
+  <!-- NEW POSTS BANNER -->
 
+
+  <!-- FEED -->
   <div id="feed"></div>
 </div>
 
-<!-- COMMENT MODAL -->
+<!-- COMMENTS MODAL -->
 <div id="comment-modal" class="hidden">
   <div class="modal">
     <h3>Comments</h3>
     <div id="comments-list"></div>
     <textarea id="comment-text" placeholder="Write a comment..."></textarea>
-    <button onclick="submitComment()">Post</button>
-    <button onclick="closeComments()">Close</button>
+    <button id="comment-submit">Post</button>
+    <button id="comment-close">Close</button>
   </div>
 </div>
 
-<!-- ONLY ONE JS FILE -->
+<!-- JS -->
 <script src="/static/js/auth.js" defer></script>
 <script src="/static/js/feed.js" defer></script>
 <script src="/static/js/comments.js" defer></script>
